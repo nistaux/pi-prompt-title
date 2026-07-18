@@ -5,7 +5,7 @@ Pi Prompt Title names the concepts involved in deriving a concise session title 
 ## Language
 
 **Session title**:
-A plain-text phrase, typically three to five words and never more than seven, that identifies the task or topic of a Pi session.
+A glanceable, plain-text terminal-tab label that identifies the task or topic of a Pi session. It typically uses three to five words and 15–30 Unicode code points, never exceeds seven words or 40 Unicode code points, and favors readable language over long exact identifiers.
 _Avoid_: Session name, chat title
 
 **Substantive prompt**:
