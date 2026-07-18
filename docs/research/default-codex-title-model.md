@@ -15,7 +15,7 @@ provider: openai-codex
 model: gpt-5.4-mini
 ```
 
-Do not fall back silently to `openai/gpt-5-nano` or `openai/gpt-5.4-nano`: doing so changes both the provider and authentication/billing boundary from a ChatGPT subscription to an API key. At runtime, still require `ModelRegistry.find("openai-codex", "gpt-5.4-mini")` and configured auth; if unavailable, retain the non-generated fallback title rather than sending the prompt through another provider.
+Do not fall back silently to `openai/gpt-5-nano` or `openai/gpt-5.4-nano`: doing so changes both the provider and authentication/billing boundary from a ChatGPT subscription to an API key. At runtime, still require `ModelRegistry.find("openai-codex", "gpt-5.4-mini")` and configured auth; if unavailable, leave the session untitled rather than sending the prompt through another provider.
 
 ## Findings
 
