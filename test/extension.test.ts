@@ -5,23 +5,17 @@ import piPromptTitle, {
   type PiPromptTitleCapabilities,
 } from "../src/index.js";
 
-function inaccessiblePiApi(): ExtensionAPI {
-  return new Proxy(
-    {},
-    {
-      get(_target, property) {
-        throw new Error(`The no-op extension accessed pi.${String(property)}`);
-      },
-    },
-  ) as ExtensionAPI;
-}
-
 describe("Pi Prompt Title extension seam", () => {
-  it("loads through its default export without registering or mutating anything", async () => {
-    expect(await piPromptTitle(inaccessiblePiApi())).toBeUndefined();
+  it("loads through its default export with only the configuration session hook", async () => {
+    const on = vi.fn();
+
+    expect(await piPromptTitle({ on } as unknown as ExtensionAPI)).toBeUndefined();
+
+    expect(on).toHaveBeenCalledTimes(1);
+    expect(on).toHaveBeenCalledWith("session_start", expect.any(Function));
   });
 
-  it("exposes the five issue-agreed capabilities to injected runtime behavior", async () => {
+  it("preserves the issue-agreed capabilities and exposes session snapshots to runtime behavior", async () => {
     const pi = { on: vi.fn() } as unknown as ExtensionAPI;
     const completeTitle = vi.fn();
     const schedule = vi.fn();
@@ -44,14 +38,16 @@ describe("Pi Prompt Title extension seam", () => {
 
     await extension(pi);
 
-    expect(received).toEqual({
+    expect(received).toMatchObject({
       lifecycle: pi,
       titleModel: { complete: completeTitle },
       timer: { schedule, cancel },
       configurationFiles: { read: readConfiguration },
       uiDiagnostics: { publish: publishDiagnostic },
+      sessionConfiguration: { subscribe: expect.any(Function) },
     });
-    expect(pi.on).not.toHaveBeenCalled();
+    expect(pi.on).toHaveBeenCalledTimes(1);
+    expect(pi.on).toHaveBeenCalledWith("session_start", expect.any(Function));
     expect(completeTitle).not.toHaveBeenCalled();
     expect(schedule).not.toHaveBeenCalled();
     expect(cancel).not.toHaveBeenCalled();
@@ -59,7 +55,7 @@ describe("Pi Prompt Title extension seam", () => {
     expect(publishDiagnostic).not.toHaveBeenCalled();
   });
 
-  it("keeps every injected boundary untouched when no runtime behavior is supplied", async () => {
+  it("keeps injected effect boundaries untouched until a session starts", async () => {
     const on = vi.fn();
     const complete = vi.fn();
     const schedule = vi.fn();
@@ -77,7 +73,8 @@ describe("Pi Prompt Title extension seam", () => {
 
     await extension({ on } as unknown as ExtensionAPI);
 
-    expect([on, complete, schedule, cancel, read, publish]).toSatisfy(
+    expect(on).toHaveBeenCalledTimes(1);
+    expect([complete, schedule, cancel, read, publish]).toSatisfy(
       (spies: ReturnType<typeof vi.fn>[]) => spies.every((spy) => spy.mock.calls.length === 0),
     );
   });
