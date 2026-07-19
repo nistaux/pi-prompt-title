@@ -38,7 +38,6 @@ interface TitleGenerationAttempt {
   controller: AbortController;
   sessionId: string;
   lifecycleRevision: number;
-  context: ExtensionContext;
 }
 
 interface StartupWarningState {
@@ -186,7 +185,6 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
       controller: new AbortController(),
       sessionId: currentSessionId,
       lifecycleRevision,
-      context: ctx,
     };
     activeAttempt = attempt;
     const warningState = currentWarnings;
@@ -217,18 +215,21 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
       },
     })
       .then((title) => {
-        const currentTitle = capabilities.lifecycle.getSessionName();
         if (
-          title !== undefined &&
-          runtimeActive &&
-          activeAttempt === attempt &&
-          !attempt.controller.signal.aborted &&
-          !titleDisqualified &&
-          sessionId === attempt.sessionId &&
-          attempt.context.sessionManager.getSessionId() === attempt.sessionId &&
-          lifecycleRevision === attempt.lifecycleRevision &&
-          isEmptyTitle(currentTitle)
+          title === undefined ||
+          !runtimeActive ||
+          activeAttempt !== attempt ||
+          attempt.controller.signal.aborted ||
+          titleDisqualified ||
+          sessionId !== attempt.sessionId ||
+          lifecycleRevision !== attempt.lifecycleRevision
         ) {
+          return;
+        }
+
+        // Only a still-current runtime may touch its session-bound naming API.
+        // Replacement and shutdown invalidate the plain state above synchronously.
+        if (isEmptyTitle(capabilities.lifecycle.getSessionName())) {
           capabilities.lifecycle.setSessionName(title);
         }
       })

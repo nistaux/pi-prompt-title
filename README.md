@@ -74,14 +74,17 @@ npm ci
 The validation commands are deterministic and require neither model credentials nor network access after dependencies are installed:
 
 ```sh
-npm test             # offline unit tests
-npm run typecheck    # strict TypeScript checking
-npm run smoke        # isolated local-path install and Pi 0.80.10 discovery/load
-npm run check        # all of the above
-npm pack --dry-run   # inspect package contents
+npm test                    # offline unit and Pi lifecycle-runner integration tests
+npm run test:integration    # focused Pi 0.80.10 lifecycle-runner integration
+npm run typecheck           # strict TypeScript checking
+npm run verify:package      # exact npm package-file and bundling boundary
+npm run smoke               # isolated direct load, local install, and manifest discovery
+npm run check               # all deterministic checks above
 ```
 
-The smoke command creates a clean-style temporary package copy and isolated Pi agent directory, runs Pi's documented local-path installation with startup networking disabled, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its configuration and one-shot title lifecycle handlers and absence of tools or commands, and removes the temporary files. It does not modify the user's Pi settings.
+The smoke command creates a candidate from tracked Git content, uses isolated Pi agent directories with startup networking disabled, directly loads `src/index.ts`, runs Pi's documented local-path installation, loads the installed manifest-addressed extension through `DefaultResourceLoader`, verifies its lifecycle handlers and absence of tools or commands, and removes the temporary files. It does not modify the user's Pi settings. The separate lifecycle-runner integration uses Pi 0.80.10's real `createAgentSession`, extension binding and dispatch, and in-memory session manager without making a provider call.
+
+The canonical Git command is a separate networked post-merge installation gate. It is not part of the deterministic offline suite and cannot be substituted by the local-path smoke.
 
 ## Research
 
