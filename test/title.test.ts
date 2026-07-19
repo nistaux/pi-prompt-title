@@ -33,7 +33,7 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
       "Treat 15–30 Unicode code points as the default range, not a loose suggestion.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Before returning, count the complete title; if it exceeds 30 code points, rewrite it more concisely by removing redundant wording and context already implied by the outcome or retained identifiers.",
+      "Mandatory output check: count the complete title and, if it exceeds 30 code points, rewrite until it is at most 30 whenever the primary outcome or sole distinguishing target remains clear.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
       "Exceed 30 only when no naturally complete shorter title can preserve the primary outcome or the prompt's sole distinguishing target.",
@@ -42,10 +42,13 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
 
   it("requires concise wording instead of verbose prompt mirroring", () => {
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Use the shortest accurate familiar words rather than mirroring the prompt.",
+      "Do not mirror request-framing verbs such as investigate, address, handle, or look into.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Prefer concise action verbs such as Fix, Debug, Check, or Review when accurate, and omit redundant category words already implied by the core outcome.",
+      "Name the underlying outcome with the shortest accurate familiar words; prefer concise verbs such as Fix, Debug, Check, or Review when accurate, and omit category words already implied by the outcome.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Hard length limits outrank prompt wording and exact-identifier retention.",
     );
   });
 
