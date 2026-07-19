@@ -286,6 +286,28 @@ describe("attemptTitleGeneration", () => {
     expect(harness.spies.cancel).toHaveBeenCalledOnce();
   });
 
+  it("settles and cleans up when the lifecycle aborts an in-flight completion", async () => {
+    const harness = createHarness();
+    const completion = deferred<AssistantMessage>();
+    const lifecycle = new AbortController();
+    harness.spies.complete.mockReturnValueOnce(completion.promise);
+
+    const result = attemptTitleGeneration("Fix billing", configured, {
+      ...harness.capabilities,
+      signal: lifecycle.signal,
+    });
+    await vi.waitFor(() => expect(harness.spies.complete).toHaveBeenCalledOnce());
+    const signal = harness.spies.complete.mock.calls[0]?.[2]?.signal;
+
+    lifecycle.abort();
+    await expect(result).resolves.toBeUndefined();
+
+    expect(signal?.aborted).toBe(true);
+    expect(harness.spies.cancel).toHaveBeenCalledOnce();
+    completion.reject(new Error("late rejection"));
+    await Promise.resolve();
+  });
+
   it("aborts the single in-flight completion when the shared timeout expires", async () => {
     const harness = createHarness();
     const completion = deferred<AssistantMessage>();

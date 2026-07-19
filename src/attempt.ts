@@ -34,6 +34,7 @@ export interface TitleGenerationAttemptCapabilities {
   modelRegistry: TitleModelRegistryCapability;
   titleModel: TitleModelCapability;
   timer: TimerCapability;
+  signal?: AbortSignal;
 }
 
 async function runTitleModelAttempt(
@@ -94,37 +95,55 @@ export async function attemptTitleGeneration(
   if (model === undefined) return undefined;
 
   const controller = new AbortController();
-  let resolveTimeout!: (value: undefined) => void;
-  const timeout = new Promise<undefined>((resolve) => {
-    resolveTimeout = resolve;
-  });
-  let timeoutHandle: ReturnType<typeof setTimeout>;
-  try {
-    timeoutHandle = capabilities.timer.schedule(() => {
-      controller.abort();
-      resolveTimeout(undefined);
-    }, configuration.timeoutMs);
-  } catch {
+  const abortFromCaller = () => controller.abort();
+  if (capabilities.signal?.aborted) {
     controller.abort();
-    return undefined;
+  } else {
+    capabilities.signal?.addEventListener("abort", abortFromCaller, { once: true });
   }
 
-  const attempt = runTitleModelAttempt(
-    substantivePrompt,
-    model,
-    controller.signal,
-    capabilities,
-  );
+  let resolveCancellation!: (value: undefined) => void;
+  const cancellation = new Promise<undefined>((resolve) => {
+    resolveCancellation = resolve;
+  });
+  const settleCancellation = () => resolveCancellation(undefined);
+  controller.signal.addEventListener("abort", settleCancellation, { once: true });
+  if (controller.signal.aborted) settleCancellation();
 
+  let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await Promise.race([attempt, timeout]);
-  } catch {
-    return undefined;
-  } finally {
+    if (controller.signal.aborted) return undefined;
     try {
-      capabilities.timer.cancel(timeoutHandle);
+      timeoutHandle = capabilities.timer.schedule(
+        () => controller.abort(),
+        configuration.timeoutMs,
+      );
     } catch {
-      // Timer cleanup is best-effort and title attempts always fail silently.
+      controller.abort();
+      return undefined;
+    }
+
+    const attempt = runTitleModelAttempt(
+      substantivePrompt,
+      model,
+      controller.signal,
+      capabilities,
+    );
+
+    try {
+      return await Promise.race([attempt, cancellation]);
+    } catch {
+      return undefined;
+    }
+  } finally {
+    capabilities.signal?.removeEventListener("abort", abortFromCaller);
+    controller.signal.removeEventListener("abort", settleCancellation);
+    if (timeoutHandle !== undefined) {
+      try {
+        capabilities.timer.cancel(timeoutHandle);
+      } catch {
+        // Timer cleanup is best-effort and title attempts always fail silently.
+      }
     }
   }
 }
