@@ -17,9 +17,12 @@
     "README.md"
   ],
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run --dir test",
     "test:unit": "vitest run test/configuration.test.ts test/extension.test.ts test/package.test.ts",
     "test:integration": "vitest run test/sdk-integration.test.ts",
+    "validate:oauth": "vitest run validation/oauth.test.ts",
+    "validate:quality": "vitest run validation/quality.test.ts",
+    "validate:review": "vitest run validation/review.test.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",

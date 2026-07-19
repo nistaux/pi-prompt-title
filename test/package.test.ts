@@ -34,9 +34,19 @@ describe("Pi package manifest", () => {
 
   it("publishes deterministic offline development commands", () => {
     expect(packageJson.scripts).toMatchObject({
-      test: "vitest run",
+      test: "vitest run --dir test",
       typecheck: "tsc --noEmit",
       smoke: "node scripts/smoke.mjs",
     });
+  });
+
+  it("keeps credential-gated release checks outside deterministic commands", () => {
+    expect(packageJson.scripts).toMatchObject({
+      "validate:oauth": "vitest run validation/oauth.test.ts",
+      "validate:quality": "vitest run validation/quality.test.ts",
+      "validate:review": "vitest run validation/review.test.ts",
+    });
+    expect(packageJson.scripts?.test).not.toContain("validation/");
+    expect(packageJson.scripts?.check).not.toContain("validate:");
   });
 });

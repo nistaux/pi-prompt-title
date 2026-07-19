@@ -144,6 +144,10 @@ The smoke command creates a candidate from tracked Git content, uses isolated Pi
 
 The canonical Git installation is a separate **networked post-merge gate**, not part of the deterministic offline suite and not replaceable by the local-path smoke. [Prove clean distribution and SDK compatibility](https://github.com/nistaux/pi-prompt-title/issues/25) records the historical gate evidence for verified commit `bef41c93c95e47d0cf2ba34cc0643a4ab2a68b6f`: the canonical command installed and discovered the extension successfully with Pi 0.80.10 in an isolated credential-free agent directory.
 
+Contributors preparing a release can run the separate credential-gated `npm run validate:oauth` and `npm run validate:quality` checks. Both live commands require Pi 0.80.10, stored ChatGPT OAuth authentication for exact `openai-codex/gpt-5.4-mini`, network access, and available provider quota or allowance. After a complete quality run, a human edits all 36 embedded judgments and rationales and runs the offline, no-model, no-network `npm run validate:review` finalizer; it is not an LLM judge. These commands remain outside `npm test` and `npm run check`.
+
+The tracked [release-validation report](docs/validation/release-validation.md) defines the sanitized schema and the result taxonomy: `pass`, `fail`, `skip`, and `environmental/inconclusive`. Missing authentication is a sanitized skip, while transient network, quota, or provider failures may be environmental/inconclusive. Neither classification satisfies the release gate.
+
 ## Research
 
 - [Pi extension seams](https://github.com/nistaux/pi-prompt-title/blob/main/docs/research/pi-extension-seams.md) records the verified Pi lifecycle, model, configuration, diagnostics, installation, and testing boundaries.
