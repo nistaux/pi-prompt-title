@@ -191,6 +191,28 @@ describe("session configuration snapshots", () => {
     expect(Object.isFrozen(harness.snapshots[0]?.diagnostics[0])).toBe(true);
   });
 
+  it.each([
+    ["extra", JSON.stringify({ extra: true })],
+    ["model.alias", JSON.stringify({ model: { provider: "p", id: "m", alias: "x" } })],
+  ])("identifies an unsupported %s field without displaying its value", async (field, content) => {
+    const secretValue = "credential-secret-must-not-display";
+    const harness = createHarness({
+      files: {
+        [join(getAgentDir(), "pi-prompt-title.json")]: content.replace(
+          /true|"x"/u,
+          JSON.stringify(secretValue),
+        ),
+      },
+    });
+
+    await harness.loadSession();
+
+    expect(harness.snapshots[0]?.diagnostics[0]?.message).toBe(
+      `Unknown field ${JSON.stringify(field)} is not supported.`,
+    );
+    expect(harness.snapshots[0]?.diagnostics[0]?.message).not.toContain(secretValue);
+  });
+
   it("never reads project configuration when project trust is inactive", async () => {
     const cwd = join("workspace", "project");
     const projectPath = join(cwd, CONFIG_DIR_NAME, "pi-prompt-title.json");

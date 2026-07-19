@@ -185,6 +185,38 @@ describe("attemptTitleGeneration", () => {
     expect(options?.signal?.aborted).toBe(false);
   });
 
+  it("observes successful model and authentication resolution without exposing attempt failures", async () => {
+    const success = createHarness();
+    const onModelAndAuthenticationResolved = vi.fn();
+
+    await expect(
+      attemptTitleGeneration("Fix billing", configured, {
+        ...success.capabilities,
+        onModelAndAuthenticationResolved,
+      }),
+    ).resolves.toBe("Fix billing");
+
+    expect(onModelAndAuthenticationResolved).toHaveBeenCalledOnce();
+    expect(
+      onModelAndAuthenticationResolved.mock.invocationCallOrder[0] ?? Infinity,
+    ).toBeLessThan(success.spies.complete.mock.invocationCallOrder[0] ?? Infinity);
+
+    const failure = createHarness();
+    const onFailedResolution = vi.fn();
+    failure.spies.getApiKeyAndHeaders.mockResolvedValueOnce({
+      ok: false,
+      error: "credential-secret",
+    });
+
+    await expect(
+      attemptTitleGeneration("Fix billing", configured, {
+        ...failure.capabilities,
+        onModelAndAuthenticationResolved: onFailedResolution,
+      }),
+    ).resolves.toBeUndefined();
+    expect(onFailedResolution).not.toHaveBeenCalled();
+  });
+
   it("fails silently before authentication when the exact model is unavailable", async () => {
     const harness = createHarness();
     harness.spies.find.mockReturnValueOnce(undefined);
