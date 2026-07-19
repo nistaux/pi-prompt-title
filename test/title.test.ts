@@ -36,19 +36,22 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
       "Mandatory output check: count the complete title and, if it exceeds 30 code points, rewrite until it is at most 30 whenever the primary outcome or sole distinguishing target remains clear.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Do not shorten below 15 code points when a naturally complete title in the default range exists.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
       "Exceed 30 only when no naturally complete shorter title can preserve the primary outcome or the prompt's sole distinguishing target.",
     );
   });
 
   it("requires concise wording instead of verbose prompt mirroring", () => {
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Do not mirror request-framing verbs such as investigate, address, handle, or look into.",
+      "Use concise, accurate familiar words rather than mirroring verbose prompt wording.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Name the underlying outcome with the shortest accurate familiar words; prefer concise verbs such as Fix, Debug, Check, or Review when accurate, and omit category words already implied by the outcome.",
+      "Prefer concise action verbs such as Fix, Debug, Check, or Review when accurate, and omit redundant category words already implied by the core outcome.",
     );
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
-      "Hard length limits outrank prompt wording and exact-identifier retention.",
+      "The preferred and hard length rules outrank prompt wording and best-effort exact-identifier retention.",
     );
   });
 
