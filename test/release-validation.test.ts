@@ -20,6 +20,7 @@ import type { TitleModelCompletion } from "../src/index.js";
 import {
   assertCleanCandidateStatus,
   assertHumanReviewCandidateHistory,
+  assertHumanReviewMachineEvidenceUnchanged,
   finalizeHumanReviewReport,
 } from "../validation/report-store.js";
 
@@ -414,6 +415,37 @@ describe("release-validation helpers", () => {
       },
       conclusion: "fail" as const,
     };
+
+    const committedMachineReport = {
+      ...report,
+      quality: {
+        ...report.quality,
+        attempts: report.quality.attempts.map((attempt) => ({
+          ...attempt,
+          humanSemanticPassed: null,
+          humanRationale: null,
+        })),
+      },
+    };
+    expect(() =>
+      assertHumanReviewMachineEvidenceUnchanged(committedMachineReport, report),
+    ).not.toThrow();
+    expect(() =>
+      assertHumanReviewMachineEvidenceUnchanged(report, report),
+    ).toThrow(/before human judgments/u);
+    expect(() =>
+      assertHumanReviewMachineEvidenceUnchanged(committedMachineReport, {
+        ...report,
+        quality: {
+          ...report.quality,
+          attempts: report.quality.attempts.map((attempt, index) =>
+            index === 0
+              ? { ...attempt, generatedTitle: "Repaired title" }
+              : attempt,
+          ),
+        },
+      }),
+    ).toThrow(/machine evidence must match/u);
 
     const finalized = finalizeHumanReviewReport(report, fixtures);
     expect(finalized).toMatchObject({

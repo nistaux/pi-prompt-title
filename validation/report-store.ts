@@ -112,12 +112,16 @@ async function currentCleanCommit(): Promise<string> {
   return commit.trim();
 }
 
+function parseReport(markdown: string): ReleaseValidationReport | undefined {
+  const match = dataPattern.exec(markdown);
+  return match?.[1] === undefined
+    ? undefined
+    : JSON.parse(match[1]) as ReleaseValidationReport;
+}
+
 async function readExistingReport(): Promise<ReleaseValidationReport | undefined> {
   try {
-    const markdown = await readFile(reportUrl, "utf8");
-    const match = dataPattern.exec(markdown);
-    if (match?.[1] === undefined) return undefined;
-    return JSON.parse(match[1]) as ReleaseValidationReport;
+    return parseReport(await readFile(reportUrl, "utf8"));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
     throw error;
@@ -177,6 +181,42 @@ async function withReportLock<T>(operation: () => Promise<T>): Promise<T> {
     } finally {
       await rm(lockPath, { force: true });
     }
+  }
+}
+
+export function assertHumanReviewMachineEvidenceUnchanged(
+  committed: ReleaseValidationReport,
+  edited: ReleaseValidationReport,
+): void {
+  if (
+    committed.quality.attempts.some(
+      (attempt) =>
+        attempt.humanSemanticPassed !== null ||
+        attempt.humanRationale !== null,
+    )
+  ) {
+    throw new Error(
+      "Machine evidence must be committed before human judgments are entered.",
+    );
+  }
+  const withoutHumanReview = (report: ReleaseValidationReport) => ({
+    ...report,
+    quality: {
+      ...report.quality,
+      attempts: report.quality.attempts.map((attempt) => ({
+        ...attempt,
+        humanSemanticPassed: null,
+        humanRationale: null,
+      })),
+    },
+  });
+  if (
+    JSON.stringify(withoutHumanReview(committed)) !==
+    JSON.stringify(withoutHumanReview(edited))
+  ) {
+    throw new Error(
+      "Human review machine evidence must match the committed live run.",
+    );
   }
 }
 
@@ -284,6 +324,7 @@ async function assertRecordedCandidateHistory(
   if (testedCommitIsAncestor) {
     const { stdout } = await execFileAsync("git", [
       "log",
+      "-m",
       "--format=",
       "--name-only",
       `${testedCommit}..${currentCommit}`,
@@ -299,6 +340,35 @@ async function assertRecordedCandidateHistory(
   });
 }
 
+async function readCommittedMachineReport(
+  testedCommit: string,
+  currentCommit: string,
+): Promise<ReleaseValidationReport> {
+  const { stdout: history } = await execFileAsync("git", [
+    "log",
+    "--reverse",
+    "--format=%H",
+    `${testedCommit}..${currentCommit}`,
+    "--",
+    reportRepositoryPath,
+  ]);
+  const evidenceCommit = history.split(/\r?\n/u).find((line) => line !== "");
+  if (evidenceCommit === undefined || !/^[0-9a-f]{40}$/u.test(evidenceCommit)) {
+    throw new Error(
+      "Commit the recorded machine evidence before editing human judgments.",
+    );
+  }
+  const { stdout: markdown } = await execFileAsync("git", [
+    "show",
+    `${evidenceCommit}:${reportRepositoryPath}`,
+  ]);
+  const report = parseReport(markdown);
+  if (report === undefined || report.testedCommit !== testedCommit) {
+    throw new Error("Committed machine evidence does not match the tested candidate.");
+  }
+  return report;
+}
+
 export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationReport> {
   const currentCommit = await currentCleanCommit();
   return withReportLock(async () => {
@@ -309,6 +379,11 @@ export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationRe
       );
     }
     await assertRecordedCandidateHistory(report.testedCommit, currentCommit);
+    const committed = await readCommittedMachineReport(
+      report.testedCommit,
+      currentCommit,
+    );
+    assertHumanReviewMachineEvidenceUnchanged(committed, report);
     const fixtureContents = await readFile(
       new URL(
         "../docs/research/title-quality-fixtures.json",

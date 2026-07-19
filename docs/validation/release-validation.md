@@ -39,7 +39,7 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 
 ## Human semantic-review procedure
 
-A human reviewer must inspect all 36 generated titles against the corresponding retained fixture. In the embedded JSON below, set every `humanSemanticPassed` to `true` or `false` and every `humanRationale` to a non-empty short explanation stating whether the title is specific, glanceable, and descriptive of the primary requested outcome or topic. Then run `npm run validate:review` to validate and atomically rerender the report. Exact-identifier-only requirements are informational and excluded from the semantic threshold. Do not use an LLM judge, retry, replace, omit, repair, or selectively rerun an attempt. A pending judgment or rationale keeps the final gate environmental/inconclusive.
+Commit the freshly recorded machine evidence before human review. A human reviewer must then inspect all 36 generated titles against the corresponding retained fixture and edit only the embedded `humanSemanticPassed` and `humanRationale` fields below. Set every judgment to `true` or `false` and every rationale to a non-empty short explanation stating whether the title is specific, glanceable, and descriptive of the primary requested outcome or topic. Then run `npm run validate:review` to verify the machine evidence against its first committed report and atomically rerender the report. Exact-identifier-only requirements are informational and excluded from the semantic threshold. Do not use an LLM judge, retry, replace, omit, repair, or selectively rerun an attempt. A pending judgment or rationale keeps the final gate environmental/inconclusive.
 
 ## Final release gate
 
