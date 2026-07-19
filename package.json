@@ -23,6 +23,7 @@
     "validate:oauth": "vitest run validation/oauth.test.ts",
     "validate:quality": "vitest run validation/quality.test.ts",
     "validate:review": "vitest run validation/review.test.ts",
+    "validate:reset": "vitest run validation/reset.test.ts",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
     "verify:package": "node scripts/verify-package.mjs",

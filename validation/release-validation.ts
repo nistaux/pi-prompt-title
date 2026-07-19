@@ -603,6 +603,7 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 - \`npm run validate:oauth\` runs one live OAuth probe.
 - \`npm run validate:quality\` runs one fresh, complete set of 36 live quality attempts.
 - \`npm run validate:review\` performs only offline recomputation after a human edits all 36 embedded JSON judgments and rationales; it makes no model or network call and is not an LLM judge.
+- After committing failed or stale evidence for history, \`npm run validate:reset\` prepares this report for both fresh gates against a new candidate.
 - Live prerequisites: Pi 0.80.10, stored ChatGPT OAuth authentication for exact \`openai-codex/gpt-5.4-mini\`, network access, and available provider quota/allowance.
 - Taxonomy: \`pass\`, \`fail\`, \`skip\`, and \`environmental/inconclusive\`. Missing authentication is \`skip\`; transient network/quota/provider failures may be \`environmental/inconclusive\`; neither satisfies the release gate.
 

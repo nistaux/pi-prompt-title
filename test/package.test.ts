@@ -45,6 +45,7 @@ describe("Pi package manifest", () => {
       "validate:oauth": "vitest run validation/oauth.test.ts",
       "validate:quality": "vitest run validation/quality.test.ts",
       "validate:review": "vitest run validation/review.test.ts",
+      "validate:reset": "vitest run validation/reset.test.ts",
     });
     expect(packageJson.scripts?.test).not.toContain("validation/");
     expect(packageJson.scripts?.check).not.toContain("validate:");
