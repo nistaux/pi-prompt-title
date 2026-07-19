@@ -19,6 +19,7 @@ import {
 import type { TitleModelCompletion } from "../src/index.js";
 import {
   assertCleanCandidateStatus,
+  assertHumanReviewCandidateHistory,
   finalizeHumanReviewReport,
 } from "../validation/report-store.js";
 
@@ -453,6 +454,34 @@ describe("release-validation helpers", () => {
         " M docs/validation/release-validation.md\nM  src/title.ts\n",
       ),
     ).toThrow(/clean committed candidate/u);
+  });
+
+  it("allows committed report-only evidence between the tested candidate and human review", () => {
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        testedCommit: "a".repeat(40),
+        currentCommit: "b".repeat(40),
+        testedCommitIsAncestor: true,
+        changedPaths: ["docs/validation/release-validation.md"],
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        testedCommit: "a".repeat(40),
+        currentCommit: "b".repeat(40),
+        testedCommitIsAncestor: true,
+        changedPaths: ["src/title.ts", "docs/validation/release-validation.md"],
+      }),
+    ).toThrow(/only release-report commits/u);
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        testedCommit: "a".repeat(40),
+        currentCommit: "b".repeat(40),
+        testedCommitIsAncestor: false,
+        changedPaths: ["docs/validation/release-validation.md"],
+      }),
+    ).toThrow(/descend from the tested candidate/u);
   });
 
   it("does not expose raw provider failures through result construction", () => {

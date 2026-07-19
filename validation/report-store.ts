@@ -84,6 +84,25 @@ export function assertCleanCandidateStatus(porcelainStatus: string): void {
   }
 }
 
+export function assertHumanReviewCandidateHistory(input: {
+  testedCommit: string;
+  currentCommit: string;
+  testedCommitIsAncestor: boolean;
+  changedPaths: readonly string[];
+}): void {
+  if (input.testedCommit === input.currentCommit) return;
+  if (!input.testedCommitIsAncestor) {
+    throw new Error(
+      "Human review HEAD must descend from the tested candidate.",
+    );
+  }
+  if (input.changedPaths.some((path) => path !== reportRepositoryPath)) {
+    throw new Error(
+      "Human review permits only release-report commits after the tested candidate.",
+    );
+  }
+}
+
 async function currentCleanCommit(): Promise<string> {
   const [{ stdout: status }, { stdout: commit }] = await Promise.all([
     execFileAsync("git", ["status", "--porcelain=v1", "--untracked-files=all"]),
@@ -240,15 +259,56 @@ export async function recordQualityValidation(
   });
 }
 
+async function assertRecordedCandidateHistory(
+  testedCommit: string,
+  currentCommit: string,
+): Promise<void> {
+  if (testedCommit === currentCommit) return;
+  if (!/^[0-9a-f]{40}$/u.test(testedCommit)) {
+    throw new Error("Recorded validation has an invalid tested commit.");
+  }
+
+  let testedCommitIsAncestor = true;
+  try {
+    await execFileAsync("git", [
+      "merge-base",
+      "--is-ancestor",
+      testedCommit,
+      currentCommit,
+    ]);
+  } catch {
+    testedCommitIsAncestor = false;
+  }
+
+  let changedPaths: string[] = [];
+  if (testedCommitIsAncestor) {
+    const { stdout } = await execFileAsync("git", [
+      "log",
+      "--format=",
+      "--name-only",
+      `${testedCommit}..${currentCommit}`,
+      "--",
+    ]);
+    changedPaths = stdout.split(/\r?\n/u).filter((path) => path !== "");
+  }
+  assertHumanReviewCandidateHistory({
+    testedCommit,
+    currentCommit,
+    testedCommitIsAncestor,
+    changedPaths,
+  });
+}
+
 export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationReport> {
-  const testedCommit = await currentCleanCommit();
+  const currentCommit = await currentCleanCommit();
   return withReportLock(async () => {
     const report = await readExistingReport();
-    if (report === undefined || report.testedCommit !== testedCommit) {
+    if (report === undefined || report.testedCommit === "not-run") {
       throw new Error(
-        "Human review must match a recorded validation run for the clean HEAD candidate.",
+        "Human review must match a recorded validation run for the candidate.",
       );
     }
+    await assertRecordedCandidateHistory(report.testedCommit, currentCommit);
     const fixtureContents = await readFile(
       new URL(
         "../docs/research/title-quality-fixtures.json",
