@@ -5,6 +5,10 @@ import type {
   ExtensionContext,
   ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
+import type {
+  TimerCapability,
+  TitleModelCapability,
+} from "./attempt.js";
 import {
   createSessionConfigurationCapability,
   loadSessionConfiguration,
@@ -27,6 +31,15 @@ export type {
   TitleModelIdentity,
 };
 
+export { attemptTitleGeneration } from "./attempt.js";
+export type {
+  TimerCapability,
+  TitleGenerationAttemptCapabilities,
+  TitleModelCapability,
+  TitleModelCompletion,
+  TitleModelRegistryCapability,
+} from "./attempt.js";
+
 export {
   TITLE_GENERATION_INSTRUCTION,
   acceptTitleCompletion,
@@ -35,19 +48,6 @@ export {
   normalizeAndValidateTitle,
 } from "./title.js";
 export type { TitleCompletion } from "./title.js";
-
-export type TitleModelCompletion = (
-  ...args: Parameters<typeof complete>
-) => ReturnType<typeof complete>;
-
-export interface TitleModelCapability {
-  complete: TitleModelCompletion;
-}
-
-export interface TimerCapability {
-  schedule(callback: () => void, delayMs: number): ReturnType<typeof setTimeout>;
-  cancel(handle: ReturnType<typeof setTimeout>): void;
-}
 
 export interface UiDiagnosticsCapability {
   publish(ctx: ExtensionContext, message: string | undefined): void;
