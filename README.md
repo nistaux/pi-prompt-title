@@ -1,6 +1,8 @@
 # Pi Prompt Title
 
-Pi Prompt Title is an installable extension foundation for [Pi](https://github.com/earendil-works/pi). It currently loads a strict, trust-aware title-generation configuration snapshot for each session and provides a tested isolated title-model attempt for later lifecycle integration. The default runtime still does not capture prompts, invoke that attempt, show warning UI, or change a session title; those behaviors are tracked by [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16).
+Pi Prompt Title is an installable extension for [Pi](https://github.com/earendil-works/pi). It loads a strict, trust-aware title-generation configuration snapshot for each session. For an enabled, fresh, unnamed session, the default runtime consumes the first expanded prompt containing non-whitespace text and starts one detached title-model attempt without delaying the active response. A valid result becomes the session title; whitespace-only and image-only input leave the session armed.
+
+This is a narrow lifecycle milestone rather than the complete release contract. Stale runtime, session, and branch rejection plus best-effort protection for titles created while generation is in flight remain tracked by [Reject stale work and preserve manual titles](https://github.com/nistaux/pi-prompt-title/issues/23). Actionable startup warnings remain tracked by [Show only actionable startup warnings](https://github.com/nistaux/pi-prompt-title/issues/24), and the complete user-facing contract remains tracked by [Document the user-facing extension contract](https://github.com/nistaux/pi-prompt-title/issues/27).
 
 ## Compatibility
 
@@ -57,7 +59,7 @@ Changes take effect on `/reload` or a session transition, not within an active s
 
 The exported attempt resolves only the configured exact provider/model through Pi's registry, resolves credentials at call time, and makes at most one full compatibility completion. One timeout covers credential resolution and completion through an attempt-owned abort signal. The completion uses explicit `reasoningEffort: "none"`, no tools, the fixed title instruction, and one whitespace-aware excerpt bounded to 1,000 Unicode code points. It returns only locally validated output; missing models or credentials, timeout, provider failure, and invalid output all return no title without retry, fallback, or diagnostics.
 
-This operation is currently an integration seam rather than automatic product behavior: the shipped no-op runtime does not call it or mutate the active session/model/context.
+The default runtime invokes this operation once for the first qualifying expanded substantive prompt of an eligible session. It launches the promise without awaiting title generation from `before_agent_start`, consumes eligibility before fallible asynchronous work, and sets only a valid returned title. It does not switch the active model or thinking level, append messages, or mutate active-session context. The additional stale-result and in-flight manual-title protections described above are not implemented at this milestone.
 
 ## Development
 
@@ -77,7 +79,7 @@ npm run check        # all of the above
 npm pack --dry-run   # inspect package contents
 ```
 
-The smoke command creates a clean-style temporary package copy and isolated Pi agent directory, runs Pi's documented local-path installation with startup networking disabled, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its single configuration lifecycle hook and absence of tools or commands, and removes the temporary files. It does not modify the user's Pi settings.
+The smoke command creates a clean-style temporary package copy and isolated Pi agent directory, runs Pi's documented local-path installation with startup networking disabled, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its configuration and one-shot title lifecycle handlers and absence of tools or commands, and removes the temporary files. It does not modify the user's Pi settings.
 
 ## Research
 
