@@ -6,6 +6,15 @@ import type {
   ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
 
+export {
+  TITLE_GENERATION_INSTRUCTION,
+  acceptTitleCompletion,
+  boundSubstantivePrompt,
+  extractTitleText,
+  normalizeAndValidateTitle,
+} from "./title.js";
+export type { TitleCompletion } from "./title.js";
+
 export type TitleModelCompletion = (
   ...args: Parameters<typeof complete>
 ) => ReturnType<typeof complete>;
