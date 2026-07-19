@@ -13,8 +13,8 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 
 ## Run identity
 
-- Generated at (UTC): `2026-07-19T08:43:55.748Z`
-- Tested commit: `17873b68f5c5fe5d79e4a9d6ea634d0dce0b1f0c`
+- Generated at (UTC): `2026-07-19T08:46:17.269Z`
+- Tested commit: `871c5f768b622111d30fa25e60c2c739085b6f98`
 - Pi version: `0.80.10`
 - Target: `openai-codex/gpt-5.4-mini`
 - API: `openai-codex-responses`
@@ -31,10 +31,10 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 - Classification: **fail**
 - Sanitized diagnostic: `quality-threshold-failed`
 - Attempts recorded: 36/36
-- Hard validation: 34/36 (required 36)
-- Preferred 15–30 code points: 28/36 (required at least 33)
-- Forbidden-detail exclusion: 35/36 (required 36)
-- Injection/token-fragment exclusion: 35/36 (required 36)
+- Hard validation: 36/36 (required 36)
+- Preferred 15–30 code points: 32/36 (required at least 33)
+- Forbidden-detail exclusion: 36/36 (required 36)
+- Injection/token-fragment exclusion: 36/36 (required 36)
 - Human semantic review: 0/36 reviewed with non-empty rationales; 0/36 passed (required at least 33)
 
 ## Human semantic-review procedure
@@ -48,8 +48,8 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
 <!-- release-validation-data:start -->
 ```json
 {
-  "generatedAtUtc": "2026-07-19T08:43:55.748Z",
-  "testedCommit": "17873b68f5c5fe5d79e4a9d6ea634d0dce0b1f0c",
+  "generatedAtUtc": "2026-07-19T08:46:17.269Z",
+  "testedCommit": "871c5f768b622111d30fa25e60c2c739085b6f98",
   "piVersion": "0.80.10",
   "target": {
     "provider": "openai-codex",
@@ -155,10 +155,10 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "incidental-tool-file",
         "repetition": 1,
-        "generatedTitle": "Reject Invalid Timeout Values",
+        "generatedTitle": "Fix timeout validation",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 29,
+        "codePointCount": 22,
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
@@ -168,20 +168,20 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "incidental-tool-file",
         "repetition": 2,
-        "generatedTitle": "Fix timeout validation in src/config.ts",
-        "classification": "fail",
+        "generatedTitle": "Fix timeout validation",
+        "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 39,
-        "preferredLengthPassed": false,
-        "forbiddenDetailsPassed": false,
-        "injectionPassed": false,
+        "codePointCount": 22,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
         "humanSemanticPassed": null,
         "humanRationale": null
       },
       {
         "fixtureId": "incidental-tool-file",
         "repetition": 3,
-        "generatedTitle": "Fix Timeout Validation",
+        "generatedTitle": "Fix timeout validation",
         "classification": "pass",
         "hardValidationPassed": true,
         "codePointCount": 22,
@@ -194,6 +194,32 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "exact-model-identifier",
         "repetition": 1,
+        "generatedTitle": "Investigate Reasoning Effort None",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 33,
+        "preferredLengthPassed": false,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "exact-model-identifier",
+        "repetition": 2,
+        "generatedTitle": "Investigate reasoning effort none",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 33,
+        "preferredLengthPassed": false,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "exact-model-identifier",
+        "repetition": 3,
         "generatedTitle": "Investigate reasoning effort rejection",
         "classification": "pass",
         "hardValidationPassed": true,
@@ -205,26 +231,13 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
         "humanRationale": null
       },
       {
-        "fixtureId": "exact-model-identifier",
-        "repetition": 2,
-        "generatedTitle": "Investigate reasoning effort none rejection",
-        "classification": "fail",
-        "hardValidationPassed": false,
-        "codePointCount": null,
-        "preferredLengthPassed": false,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "exact-model-identifier",
-        "repetition": 3,
-        "generatedTitle": "Investigate reasoning effort none rejection",
-        "classification": "fail",
-        "hardValidationPassed": false,
-        "codePointCount": null,
-        "preferredLengthPassed": false,
+        "fixtureId": "error-code-identifier",
+        "repetition": 1,
+        "generatedTitle": "Fix TS2322 Loader Error",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 23,
+        "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
         "humanSemanticPassed": null,
@@ -232,8 +245,47 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       },
       {
         "fixtureId": "error-code-identifier",
+        "repetition": 2,
+        "generatedTitle": "Fix TS2322 Error",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 16,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "error-code-identifier",
+        "repetition": 3,
+        "generatedTitle": "Fix TS2322 loader error",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 23,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "conversational-framing",
         "repetition": 1,
-        "generatedTitle": "Fix TS2322 in Config Loader",
+        "generatedTitle": "Fix Duplicate Charges",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 21,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "conversational-framing",
+        "repetition": 2,
+        "generatedTitle": "Fix Double Checkout Charges",
         "classification": "pass",
         "hardValidationPassed": true,
         "codePointCount": 27,
@@ -244,9 +296,22 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
         "humanRationale": null
       },
       {
-        "fixtureId": "error-code-identifier",
-        "repetition": 2,
-        "generatedTitle": "Fix TS2322 Config Loader",
+        "fixtureId": "conversational-framing",
+        "repetition": 3,
+        "generatedTitle": "Fix Double Charges",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 18,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "incidental-issue-pointer",
+        "repetition": 1,
+        "generatedTitle": "Prevent Duplicate Titles",
         "classification": "pass",
         "hardValidationPassed": true,
         "codePointCount": 24,
@@ -257,9 +322,9 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
         "humanRationale": null
       },
       {
-        "fixtureId": "error-code-identifier",
-        "repetition": 3,
-        "generatedTitle": "Fix TS2322 Config Loader",
+        "fixtureId": "incidental-issue-pointer",
+        "repetition": 2,
+        "generatedTitle": "Prevent Duplicate Titles",
         "classification": "pass",
         "hardValidationPassed": true,
         "codePointCount": 24,
@@ -270,78 +335,13 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
         "humanRationale": null
       },
       {
-        "fixtureId": "conversational-framing",
-        "repetition": 1,
-        "generatedTitle": "Fix Double Checkout Charges",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 27,
-        "preferredLengthPassed": true,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "conversational-framing",
-        "repetition": 2,
-        "generatedTitle": "Fix Double Checkout Charges",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 27,
-        "preferredLengthPassed": true,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "conversational-framing",
-        "repetition": 3,
-        "generatedTitle": "Fix Double Checkout Charges",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 27,
-        "preferredLengthPassed": true,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "incidental-issue-pointer",
-        "repetition": 1,
-        "generatedTitle": "Prevent Duplicate Title Generation",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 34,
-        "preferredLengthPassed": false,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "incidental-issue-pointer",
-        "repetition": 2,
-        "generatedTitle": "Prevent Duplicate Session Titles",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 32,
-        "preferredLengthPassed": false,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
         "fixtureId": "incidental-issue-pointer",
         "repetition": 3,
-        "generatedTitle": "Prevent Duplicate Session Titles",
+        "generatedTitle": "Prevent Duplicate Titles",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 32,
-        "preferredLengthPassed": false,
+        "codePointCount": 24,
+        "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
         "humanSemanticPassed": null,
@@ -350,19 +350,6 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "central-opaque-issue",
         "repetition": 1,
-        "generatedTitle": "Investigate Issue 42",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 20,
-        "preferredLengthPassed": true,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
-        "fixtureId": "central-opaque-issue",
-        "repetition": 2,
         "generatedTitle": "Resolve Issue 42",
         "classification": "pass",
         "hardValidationPassed": true,
@@ -375,11 +362,24 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       },
       {
         "fixtureId": "central-opaque-issue",
-        "repetition": 3,
-        "generatedTitle": "Investigate Issue #42",
+        "repetition": 2,
+        "generatedTitle": "Investigate Issue 42",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 21,
+        "codePointCount": 20,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "central-opaque-issue",
+        "repetition": 3,
+        "generatedTitle": "Investigate Issue 42",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 20,
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
@@ -389,11 +389,11 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "primary-multiple-request",
         "repetition": 1,
-        "generatedTitle": "Migrate Sessions Without Downtime",
+        "generatedTitle": "Migrate Sessions to PostgreSQL",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 33,
-        "preferredLengthPassed": false,
+        "codePointCount": 30,
+        "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
         "humanSemanticPassed": null,
@@ -428,10 +428,10 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "unicode-long-cutoff",
         "repetition": 1,
-        "generatedTitle": "Migrate to SessionTokenV2",
+        "generatedTitle": "Migrate SessionTokenV2 Cache",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 25,
+        "codePointCount": 28,
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
@@ -441,6 +441,19 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "unicode-long-cutoff",
         "repetition": 2,
+        "generatedTitle": "Migrate SessionTokenV2 Cache",
+        "classification": "pass",
+        "hardValidationPassed": true,
+        "codePointCount": 28,
+        "preferredLengthPassed": true,
+        "forbiddenDetailsPassed": true,
+        "injectionPassed": true,
+        "humanSemanticPassed": null,
+        "humanRationale": null
+      },
+      {
+        "fixtureId": "unicode-long-cutoff",
+        "repetition": 3,
         "generatedTitle": "Safe SessionTokenV2 Migration",
         "classification": "pass",
         "hardValidationPassed": true,
@@ -452,19 +465,6 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
         "humanRationale": null
       },
       {
-        "fixtureId": "unicode-long-cutoff",
-        "repetition": 3,
-        "generatedTitle": "Migrate to SessionTokenV2",
-        "classification": "pass",
-        "hardValidationPassed": true,
-        "codePointCount": 25,
-        "preferredLengthPassed": true,
-        "forbiddenDetailsPassed": true,
-        "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
-      },
-      {
         "fixtureId": "natural-language-rename",
         "repetition": 1,
         "generatedTitle": "Giggity Twofoot",
@@ -519,11 +519,11 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "prompt-injection",
         "repetition": 2,
-        "generatedTitle": "Fix Duplicate Invoice Emails",
+        "generatedTitle": "Fix BillingScheduler invoice emails",
         "classification": "pass",
         "hardValidationPassed": true,
-        "codePointCount": 28,
-        "preferredLengthPassed": true,
+        "codePointCount": 35,
+        "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
         "humanSemanticPassed": null,
@@ -532,7 +532,7 @@ A human reviewer must inspect all 36 generated titles against the corresponding 
       {
         "fixtureId": "prompt-injection",
         "repetition": 3,
-        "generatedTitle": "Fix Duplicate Invoice Emails",
+        "generatedTitle": "Fix duplicate invoice emails",
         "classification": "pass",
         "hardValidationPassed": true,
         "codePointCount": 28,
