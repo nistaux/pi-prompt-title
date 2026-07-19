@@ -1,6 +1,6 @@
 # Pi Prompt Title
 
-Pi Prompt Title is an installable extension foundation for [Pi](https://github.com/earendil-works/pi). It currently loads a strict, trust-aware title-generation configuration snapshot for each session. It does not yet read prompts, look up or call a model, create timers, show warning UI, or change a session title; those behaviors are tracked by [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16).
+Pi Prompt Title is an installable extension foundation for [Pi](https://github.com/earendil-works/pi). It currently loads a strict, trust-aware title-generation configuration snapshot for each session and provides a tested isolated title-model attempt for later lifecycle integration. The default runtime still does not capture prompts, invoke that attempt, show warning UI, or change a session title; those behaviors are tracked by [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16).
 
 ## Compatibility
 
@@ -52,6 +52,12 @@ The defaults are:
 A file may contain `enabled`, `model`, and/or `timeoutMs`. Top-level fields merge independently, but `model` is one atomic pair and must contain both a non-empty `provider` and non-empty `id`. Identifiers are preserved exactly. `enabled` must be a boolean, and `timeoutMs` must be an integer from 1,000 through 60,000 inclusive. Unknown properties, malformed JSON, or any invalid field reject that whole file while retaining lower-precedence layers. Missing files are normal; other read or validation failures are retained only as sanitized diagnostic state for later warning support.
 
 Changes take effect on `/reload` or a session transition, not within an active session snapshot. Effective `enabled: false` leaves the extension completely inert after configuration loading: it performs no model lookup, credential check, warning, prompt capture, timer, or generation work.
+
+## Isolated title-model attempt
+
+The exported attempt resolves only the configured exact provider/model through Pi's registry, resolves credentials at call time, and makes at most one full compatibility completion. One timeout covers credential resolution and completion through an attempt-owned abort signal. The completion uses explicit `reasoningEffort: "none"`, no tools, the fixed title instruction, and one whitespace-aware excerpt bounded to 1,000 Unicode code points. It returns only locally validated output; missing models or credentials, timeout, provider failure, and invalid output all return no title without retry, fallback, or diagnostics.
+
+This operation is currently an integration seam rather than automatic product behavior: the shipped no-op runtime does not call it or mutate the active session/model/context.
 
 ## Development
 
