@@ -1,8 +1,6 @@
 # Pi Prompt Title
 
-Pi Prompt Title is an installable extension foundation for [Pi](https://github.com/earendil-works/pi). The current package is intentionally a no-op: it can be discovered and loaded, but it does not yet read prompts or configuration, call a model, create timers, show UI, or change a session title.
-
-Automatic asynchronous session titles are being implemented in follow-up work tracked by [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16).
+Pi Prompt Title is an installable extension foundation for [Pi](https://github.com/earendil-works/pi). It currently loads a strict, trust-aware title-generation configuration snapshot for each session. It does not yet read prompts, look up or call a model, create timers, show warning UI, or change a session title; those behaviors are tracked by [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16).
 
 ## Compatibility
 
@@ -30,6 +28,31 @@ pi -e ./path/to/pi-prompt-title/src/index.ts
 
 Pi packages and extensions execute with the user's full system permissions. Review third-party source before installing it.
 
+## Configuration
+
+Each `session_start` loads one deeply immutable snapshot from these layers, in increasing precedence:
+
+1. built-in defaults;
+2. `~/.pi/agent/pi-prompt-title.json` (using Pi's active agent directory); and
+3. Pi's active project configuration directory—normally `<project>/.pi/pi-prompt-title.json`—only for a trusted project. Rebranded Pi distributions use their configured directory name instead of `.pi`.
+
+The defaults are:
+
+```json
+{
+  "enabled": true,
+  "model": {
+    "provider": "openai-codex",
+    "id": "gpt-5.4-mini"
+  },
+  "timeoutMs": 10000
+}
+```
+
+A file may contain `enabled`, `model`, and/or `timeoutMs`. Top-level fields merge independently, but `model` is one atomic pair and must contain both a non-empty `provider` and non-empty `id`. Identifiers are preserved exactly. `enabled` must be a boolean, and `timeoutMs` must be an integer from 1,000 through 60,000 inclusive. Unknown properties, malformed JSON, or any invalid field reject that whole file while retaining lower-precedence layers. Missing files are normal; other read or validation failures are retained only as sanitized diagnostic state for later warning support.
+
+Changes take effect on `/reload` or a session transition, not within an active session snapshot. Effective `enabled: false` leaves the extension completely inert after configuration loading: it performs no model lookup, credential check, warning, prompt capture, timer, or generation work.
+
 ## Development
 
 Install the locked development dependencies:
@@ -48,7 +71,7 @@ npm run check        # all of the above
 npm pack --dry-run   # inspect package contents
 ```
 
-The smoke command creates a clean-style temporary package copy and isolated Pi agent directory, runs Pi's documented local-path installation with startup networking disabled, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies that it registered no effects, and removes the temporary files. It does not modify the user's Pi settings.
+The smoke command creates a clean-style temporary package copy and isolated Pi agent directory, runs Pi's documented local-path installation with startup networking disabled, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its single configuration lifecycle hook and absence of tools or commands, and removes the temporary files. It does not modify the user's Pi settings.
 
 ## Research
 

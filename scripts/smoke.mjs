@@ -151,7 +151,8 @@ async function runIsolatedSmoke() {
     assert.equal(loaded.extensions.length, 1);
     const [extension] = loaded.extensions;
     assert.ok(extension, "expected Pi to load the manifest extension");
-    assert.equal(extension.handlers.size, 0);
+    assert.equal(extension.handlers.size, 1);
+    assert.equal(extension.handlers.get("session_start")?.length, 1);
     assert.equal(extension.tools.size, 0);
     assert.equal(extension.commands.size, 0);
     assert.equal(extension.flags.size, 0);

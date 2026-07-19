@@ -5,6 +5,27 @@ import type {
   ExtensionContext,
   ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
+import {
+  createSessionConfigurationCapability,
+  loadSessionConfiguration,
+  type ConfigurationDiagnostic,
+  type ConfigurationFileCapability,
+  type SessionConfigurationCapability,
+  type SessionConfigurationConsumer,
+  type SessionConfigurationState,
+  type TitleGenerationConfiguration,
+  type TitleModelIdentity,
+} from "./configuration.js";
+
+export type {
+  ConfigurationDiagnostic,
+  ConfigurationFileCapability,
+  SessionConfigurationCapability,
+  SessionConfigurationConsumer,
+  SessionConfigurationState,
+  TitleGenerationConfiguration,
+  TitleModelIdentity,
+};
 
 export {
   TITLE_GENERATION_INSTRUCTION,
@@ -28,10 +49,6 @@ export interface TimerCapability {
   cancel(handle: ReturnType<typeof setTimeout>): void;
 }
 
-export interface ConfigurationFileCapability {
-  read(path: string, signal?: AbortSignal): Promise<string>;
-}
-
 export interface UiDiagnosticsCapability {
   publish(ctx: ExtensionContext, message: string | undefined): void;
 }
@@ -45,6 +62,7 @@ export interface PiPromptTitleDependencies {
 
 export interface PiPromptTitleCapabilities extends PiPromptTitleDependencies {
   lifecycle: Pick<ExtensionAPI, "on">;
+  sessionConfiguration: SessionConfigurationCapability;
 }
 
 export type PiPromptTitleRuntime = (
@@ -86,11 +104,21 @@ export function createPiPromptTitleExtension(
   const runtime = options.runtime ?? noOpRuntime;
   const dependencies = options.dependencies ?? productionDependencies;
 
-  return (pi) =>
-    runtime({
+  return (pi) => {
+    const sessionConfiguration = createSessionConfigurationCapability();
+
+    pi.on("session_start", async (_event, ctx) => {
+      sessionConfiguration.publish(
+        await loadSessionConfiguration(ctx, dependencies.configurationFiles),
+      );
+    });
+
+    return runtime({
       lifecycle: pi,
+      sessionConfiguration: sessionConfiguration.capability,
       ...dependencies,
     });
+  };
 }
 
 export default createPiPromptTitleExtension();
