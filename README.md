@@ -102,7 +102,7 @@ The extension aborts when possible and always discards late output after reload 
 
 The title instruction asks for a concrete, glanceable description of the primary requested outcome or topic. It prefers three to five whitespace-separated words and 15–30 Unicode code points, but naturally complete one- or two-word titles are allowed. The hard limits are one to seven words and no more than 40 Unicode code points.
 
-A result is accepted only after local format validation. The completion must stop normally and contain text blocks only. The extension joins those blocks, trims outer whitespace, and collapses runs of ASCII spaces or tabs. It rejects empty, multiline, control-character, Markdown-wrapped/list/heading/link, matching-quotation-wrapped, title-prefixed, non-text, non-stop, over-seven-word, or over-40-code-point output.
+A result is accepted only after local format validation. The completion must stop normally and contain text blocks only. The extension joins those blocks, trims outer whitespace, and collapses runs of ASCII spaces or tabs. It rejects empty, multiline, control-character, whole-output Markdown strong/strikethrough/inline-code wrappers, Markdown bullet/heading/blockquote forms, whole-output Markdown links or images, matching-quotation-wrapped, title-prefixed, non-text, non-stop, over-seven-word, or over-40-code-point output.
 
 Invalid output is never truncated, unwrapped, repaired, rewritten, or retried. Exact identifiers naming the target are requested only on a best-effort basis when compatible with readability and the hard limits. Long identifiers may be shortened or paraphrased, and occasional exact-identifier omission is an accepted quality limitation rather than a runtime failure.
 
