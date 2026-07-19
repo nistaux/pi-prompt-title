@@ -5,9 +5,10 @@ import type {
   ExtensionContext,
   ExtensionFactory,
 } from "@earendil-works/pi-coding-agent";
-import type {
-  TimerCapability,
-  TitleModelCapability,
+import {
+  attemptTitleGeneration,
+  type TimerCapability,
+  type TitleModelCapability,
 } from "./attempt.js";
 import {
   createSessionConfigurationCapability,
@@ -61,7 +62,7 @@ export interface PiPromptTitleDependencies {
 }
 
 export interface PiPromptTitleCapabilities extends PiPromptTitleDependencies {
-  lifecycle: Pick<ExtensionAPI, "on">;
+  lifecycle: Pick<ExtensionAPI, "on" | "getSessionName" | "setSessionName">;
   sessionConfiguration: SessionConfigurationCapability;
 }
 
@@ -96,12 +97,56 @@ const productionDependencies: PiPromptTitleDependencies = {
   },
 };
 
-const noOpRuntime: PiPromptTitleRuntime = () => undefined;
+const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) => {
+  let sessionConfiguration: TitleGenerationConfiguration | undefined;
+  let armed = false;
+
+  capabilities.sessionConfiguration.subscribe((state) => {
+    sessionConfiguration = state.configuration;
+  });
+
+  capabilities.lifecycle.on("session_start", (_event, ctx) => {
+    const configuration = sessionConfiguration;
+    if (configuration?.enabled !== true) {
+      armed = false;
+      return;
+    }
+
+    const sessionTitle = capabilities.lifecycle.getSessionName();
+    const hasPriorUserMessage = ctx.sessionManager.getBranch().some(
+      (entry) =>
+        entry.type === "message" && entry.message.role === "user",
+    );
+
+    armed =
+      (sessionTitle === undefined || sessionTitle.length === 0) &&
+      !hasPriorUserMessage;
+  });
+
+  capabilities.lifecycle.on("before_agent_start", (event, ctx) => {
+    const configuration = sessionConfiguration;
+    if (!armed || configuration === undefined || !/\S/u.test(event.prompt)) {
+      return;
+    }
+
+    // Consume the session's only opportunity before any fallible asynchronous work.
+    armed = false;
+    void attemptTitleGeneration(event.prompt, configuration, {
+      modelRegistry: ctx.modelRegistry,
+      titleModel: capabilities.titleModel,
+      timer: capabilities.timer,
+    })
+      .then((title) => {
+        if (title !== undefined) capabilities.lifecycle.setSessionName(title);
+      })
+      .catch(() => undefined);
+  });
+};
 
 export function createPiPromptTitleExtension(
   options: PiPromptTitleExtensionOptions = {},
 ): ExtensionFactory {
-  const runtime = options.runtime ?? noOpRuntime;
+  const runtime = options.runtime ?? oneShotSessionTitleRuntime;
   const dependencies = options.dependencies ?? productionDependencies;
 
   return (pi) => {
