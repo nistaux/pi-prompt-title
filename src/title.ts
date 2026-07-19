@@ -10,7 +10,7 @@ Describe the prompt's primary requested outcome or topic. Prioritize the outcome
 
 If the prompt explicitly requests a natural-language session title, return that requested title itself—not a description of setting or renaming it—when it remains valid.
 
-For requested changes, prefer a concrete action-first title. Noun phrases remain acceptable for questions and topics.
+For requested changes, prefer a concrete action-first title. Noun phrases remain acceptable for questions and topics. Use the shortest accurate familiar words rather than mirroring the prompt. Prefer concise action verbs such as Fix, Debug, Check, or Review when accurate, and omit redundant category words already implied by the core outcome.
 
 Treat 15–30 Unicode code points as the default range, not a loose suggestion. Usually use three to five whitespace-separated words. Before returning, count the complete title; if it exceeds 30 code points, rewrite it more concisely by removing redundant wording and context already implied by the outcome or retained identifiers. Exceed 30 only when no naturally complete shorter title can preserve the primary outcome or the prompt's sole distinguishing target. Allow a naturally complete one- or two-word title. Never exceed seven words or 40 Unicode code points.
 

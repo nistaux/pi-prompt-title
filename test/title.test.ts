@@ -40,6 +40,15 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
     );
   });
 
+  it("requires concise wording instead of verbose prompt mirroring", () => {
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Use the shortest accurate familiar words rather than mirroring the prompt.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Prefer concise action verbs such as Fix, Debug, Check, or Review when accurate, and omit redundant category words already implied by the core outcome.",
+    );
+  });
+
   it("omits dispensable tools, paths, commands, and issue pointers", () => {
     expect(TITLE_GENERATION_INSTRUCTION).toContain(
       "Never include a tool, path, command, or issue pointer merely because it appears in the prompt.",
