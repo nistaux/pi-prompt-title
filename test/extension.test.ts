@@ -439,6 +439,39 @@ describe("actionable startup warnings", () => {
     );
   });
 
+  it("does not publish through a stale diagnostics context when generation authentication resolves after shutdown", async () => {
+    const harness = createLifecycleHarness();
+    const authentication = deferred<{ ok: true }>();
+    harness.spies.find.mockReturnValueOnce(undefined);
+    harness.spies.getApiKeyAndHeaders.mockReturnValueOnce(authentication.promise);
+
+    await harness.load();
+    await harness.emit("before_agent_start", {
+      type: "before_agent_start",
+      prompt: "Fix billing",
+      systemPrompt: "active context",
+      systemPromptOptions: {},
+    });
+    await vi.waitFor(() =>
+      expect(harness.spies.getApiKeyAndHeaders).toHaveBeenCalledOnce(),
+    );
+    const diagnosticCountBeforeShutdown = harness.spies.publish.mock.calls.length;
+
+    await harness.emit("session_shutdown", {
+      type: "session_shutdown",
+      reason: "reload",
+    });
+    authentication.resolve({ ok: true });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(harness.spies.publish).toHaveBeenCalledTimes(
+      diagnosticCountBeforeShutdown,
+    );
+    expect(harness.spies.complete).not.toHaveBeenCalled();
+    expect(harness.spies.setSessionName).not.toHaveBeenCalled();
+  });
+
   it("keeps all failures after the title opportunity silent", async () => {
     const harness = createLifecycleHarness();
     await harness.load();

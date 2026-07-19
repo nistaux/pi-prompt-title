@@ -43,6 +43,7 @@ async function runIsolatedSmoke() {
 
   const temporaryRoot = await mkdtemp(join(tmpdir(), "pi-prompt-title-smoke-"));
   const cleanCheckout = join(temporaryRoot, "checkout");
+  const directAgentDir = join(temporaryRoot, "direct-agent");
   const agentDir = join(temporaryRoot, "agent");
   const workspace = join(temporaryRoot, "workspace");
 
@@ -66,6 +67,7 @@ async function runIsolatedSmoke() {
   try {
     await Promise.all([
       mkdir(cleanCheckout, { recursive: true }),
+      mkdir(directAgentDir, { recursive: true }),
       mkdir(agentDir, { recursive: true }),
       mkdir(workspace, { recursive: true }),
     ]);
@@ -113,6 +115,21 @@ async function runIsolatedSmoke() {
         .map((path) => access(join(cleanCheckout, path))),
     );
     await assert.rejects(access(join(cleanCheckout, "node_modules")));
+
+    const directLoader = new DefaultResourceLoader({
+      cwd: workspace,
+      agentDir: directAgentDir,
+      additionalExtensionPaths: [join(cleanCheckout, "src", "index.ts")],
+      noSkills: true,
+      noPromptTemplates: true,
+      noThemes: true,
+      noContextFiles: true,
+    });
+    await directLoader.reload();
+    const directlyLoaded = directLoader.getExtensions();
+    assert.deepEqual(directlyLoaded.errors, []);
+    assert.equal(directlyLoaded.extensions.length, 1);
+    assert.equal(directlyLoaded.extensions[0]?.handlers.size, 5);
 
     const piCli = join(piPackageRoot, "dist", "cli.js");
     const installation = spawnSync(
@@ -164,7 +181,9 @@ async function runIsolatedSmoke() {
     assert.equal(extension.messageRenderers.size, 0);
     assert.equal(extension.entryRenderers?.size ?? 0, 0);
 
-    console.log("Pi 0.80.10 isolated local-path discovery/load smoke passed");
+    console.log(
+      "Pi 0.80.10 isolated direct-load and local-path install/discovery smoke passed",
+    );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
   }

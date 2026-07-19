@@ -38,7 +38,6 @@ interface TitleGenerationAttempt {
   controller: AbortController;
   sessionId: string;
   lifecycleRevision: number;
-  context: ExtensionContext;
 }
 
 interface StartupWarningState {
@@ -63,11 +62,11 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
   let activeAttempt: TitleGenerationAttempt | undefined;
   let currentWarnings: StartupWarningState | undefined;
 
-  const publishWarnings = (
-    ctx: ExtensionContext,
-    warnings: readonly string[],
-  ): void => {
-    if (ctx.mode !== "tui") return;
+  let currentDiagnosticsContext: ExtensionContext | undefined;
+
+  const publishWarnings = (warnings: readonly string[]): void => {
+    const ctx = currentDiagnosticsContext;
+    if (ctx === undefined) return;
     capabilities.uiDiagnostics.publish(ctx, warnings);
   };
 
@@ -92,7 +91,10 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
   capabilities.lifecycle.on("session_start", (event, ctx) => {
     invalidateAttempt();
     runtimeActive = true;
-    sessionId = ctx.sessionManager.getSessionId();
+    currentDiagnosticsContext = ctx.mode === "tui" ? ctx : undefined;
+    const sessionManager = ctx.sessionManager;
+    const modelRegistry = ctx.modelRegistry;
+    sessionId = sessionManager.getSessionId();
     lifecycleRevision += 1;
 
     const state = sessionState;
@@ -100,13 +102,13 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
       armed = false;
       titleDisqualified = true;
       currentWarnings = undefined;
-      publishWarnings(ctx, []);
+      publishWarnings([]);
       return;
     }
 
     const sessionTitle = capabilities.lifecycle.getSessionName();
     titleDisqualified = !isEmptyTitle(sessionTitle);
-    const hasPriorUserMessage = ctx.sessionManager.getBranch().some(
+    const hasPriorUserMessage = sessionManager.getBranch().some(
       (entry) =>
         entry.type === "message" && entry.message.role === "user",
     );
@@ -123,10 +125,10 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
       modelOrAuthenticationWarningVisible: false,
     };
     currentWarnings = warningState;
-    publishWarnings(ctx, warningState.configurationWarnings);
+    publishWarnings(warningState.configurationWarnings);
 
     void preflightTitleModel(state.configuration, {
-      modelRegistry: ctx.modelRegistry,
+      modelRegistry,
       timer: capabilities.timer,
     })
       .then((preflight) => {
@@ -143,7 +145,7 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
         }
 
         warningState.modelOrAuthenticationWarningVisible = true;
-        publishWarnings(ctx, formatStartupWarnings(state, preflight));
+        publishWarnings(formatStartupWarnings(state, preflight));
       })
       .catch(() => undefined);
   });
@@ -159,6 +161,7 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
   });
 
   capabilities.lifecycle.on("session_shutdown", () => {
+    currentDiagnosticsContext = undefined;
     runtimeActive = false;
     lifecycleRevision += 1;
     permanentlyInvalidateSession();
@@ -166,7 +169,9 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
 
   capabilities.lifecycle.on("before_agent_start", (event, ctx) => {
     const state = sessionState;
-    const currentSessionId = ctx.sessionManager.getSessionId();
+    const sessionManager = ctx.sessionManager;
+    const modelRegistry = ctx.modelRegistry;
+    const currentSessionId = sessionManager.getSessionId();
     if (
       !runtimeActive ||
       !armed ||
@@ -186,13 +191,12 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
       controller: new AbortController(),
       sessionId: currentSessionId,
       lifecycleRevision,
-      context: ctx,
     };
     activeAttempt = attempt;
     const warningState = currentWarnings;
 
     void attemptTitleGeneration(event.prompt, state.configuration, {
-      modelRegistry: ctx.modelRegistry,
+      modelRegistry,
       titleModel: capabilities.titleModel,
       timer: capabilities.timer,
       signal: attempt.controller.signal,
@@ -212,23 +216,26 @@ export const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) =
         warningState.modelAndAuthenticationResolved = true;
         if (warningState.modelOrAuthenticationWarningVisible) {
           warningState.modelOrAuthenticationWarningVisible = false;
-          publishWarnings(ctx, warningState.configurationWarnings);
+          publishWarnings(warningState.configurationWarnings);
         }
       },
     })
       .then((title) => {
-        const currentTitle = capabilities.lifecycle.getSessionName();
         if (
-          title !== undefined &&
-          runtimeActive &&
-          activeAttempt === attempt &&
-          !attempt.controller.signal.aborted &&
-          !titleDisqualified &&
-          sessionId === attempt.sessionId &&
-          attempt.context.sessionManager.getSessionId() === attempt.sessionId &&
-          lifecycleRevision === attempt.lifecycleRevision &&
-          isEmptyTitle(currentTitle)
+          title === undefined ||
+          !runtimeActive ||
+          activeAttempt !== attempt ||
+          attempt.controller.signal.aborted ||
+          titleDisqualified ||
+          sessionId !== attempt.sessionId ||
+          lifecycleRevision !== attempt.lifecycleRevision
         ) {
+          return;
+        }
+
+        // Only a still-current runtime may touch its session-bound naming API.
+        // Replacement and shutdown invalidate the plain state above synchronously.
+        if (isEmptyTitle(capabilities.lifecycle.getSessionName())) {
           capabilities.lifecycle.setSessionName(title);
         }
       })
