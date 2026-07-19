@@ -94,11 +94,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function hasOnlyProperties(
+function findUnknownProperty(
   value: Record<string, unknown>,
   allowed: ReadonlySet<string>,
-): boolean {
-  return Object.keys(value).every((key) => allowed.has(key));
+): string | undefined {
+  return Object.keys(value).find((key) => !allowed.has(key));
 }
 
 function validateLayer(value: unknown):
@@ -107,8 +107,15 @@ function validateLayer(value: unknown):
   if (!isObject(value)) {
     return { valid: false, message: "Configuration must be a JSON object." };
   }
-  if (!hasOnlyProperties(value, new Set(["enabled", "model", "timeoutMs"]))) {
-    return { valid: false, message: "Configuration contains an unknown property." };
+  const unknownProperty = findUnknownProperty(
+    value,
+    new Set(["enabled", "model", "timeoutMs"]),
+  );
+  if (unknownProperty !== undefined) {
+    return {
+      valid: false,
+      message: `Unknown field ${JSON.stringify(unknownProperty)} is not supported.`,
+    };
   }
 
   const layer: ConfigurationLayer = {};
@@ -123,8 +130,15 @@ function validateLayer(value: unknown):
     if (!isObject(value.model)) {
       return { valid: false, message: '"model" must be an object.' };
     }
-    if (!hasOnlyProperties(value.model, new Set(["provider", "id"]))) {
-      return { valid: false, message: '"model" contains an unknown property.' };
+    const unknownModelProperty = findUnknownProperty(
+      value.model,
+      new Set(["provider", "id"]),
+    );
+    if (unknownModelProperty !== undefined) {
+      return {
+        valid: false,
+        message: `Unknown field ${JSON.stringify(`model.${unknownModelProperty}`)} is not supported.`,
+      };
     }
     if (!Object.hasOwn(value.model, "provider") || !Object.hasOwn(value.model, "id")) {
       return {

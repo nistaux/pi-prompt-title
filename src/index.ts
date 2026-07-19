@@ -46,6 +46,12 @@ export {
 } from "./title.js";
 export type { TitleCompletion } from "./title.js";
 
+export { formatStartupWarnings, preflightTitleModel } from "./warnings.js";
+export type {
+  StartupPreflightCapabilities,
+  StartupPreflightStatus,
+} from "./warnings.js";
+
 export type {
   PiPromptTitleCapabilities,
   PiPromptTitleDependencies,
@@ -71,10 +77,14 @@ const productionDependencies: PiPromptTitleDependencies = {
         : readFile(path, { encoding: "utf8", signal }),
   },
   uiDiagnostics: {
-    publish: (ctx, message) => {
+    publish: (ctx, warnings) => {
+      if (ctx.mode !== "tui") return;
       ctx.ui.setWidget(
         "pi-prompt-title",
-        message === undefined ? undefined : [message],
+        warnings.length === 0
+          ? undefined
+          : warnings.map((warning) => ctx.ui.theme.fg("warning", warning)),
+        { placement: "aboveEditor" },
       );
     },
   },

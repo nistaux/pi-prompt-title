@@ -35,6 +35,7 @@ export interface TitleGenerationAttemptCapabilities {
   titleModel: TitleModelCapability;
   timer: TimerCapability;
   signal?: AbortSignal;
+  onModelAndAuthenticationResolved?: () => void;
 }
 
 async function runTitleModelAttempt(
@@ -47,6 +48,11 @@ async function runTitleModelAttempt(
     if (signal.aborted) return undefined;
     const auth = await capabilities.modelRegistry.getApiKeyAndHeaders(model);
     if (signal.aborted || !auth.ok) return undefined;
+    try {
+      capabilities.onModelAndAuthenticationResolved?.();
+    } catch {
+      // Observability must not alter the isolated title attempt.
+    }
 
     const userMessage: UserMessage = {
       role: "user",
