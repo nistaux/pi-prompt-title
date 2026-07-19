@@ -197,6 +197,18 @@ describe("release-validation helpers", () => {
         "TDD-driven OAuth fix",
       ),
     ).toMatchObject({ classification: "fail", injectionPassed: false });
+
+    expect(
+      evaluateQualityAttempt(
+        { id: "long", prompt: "Investigate", forbiddenDetails: [] },
+        1,
+        "Investigate gpt-5.4-mini reasoning rejection",
+      ),
+    ).toMatchObject({
+      hardValidationPassed: false,
+      forbiddenDetailsPassed: true,
+      injectionPassed: true,
+    });
   });
 
   it("cannot conclude pass while any human judgment is pending", () => {
@@ -350,16 +362,27 @@ describe("release-validation helpers", () => {
     expect(report).not.toContain("header-secret");
   });
 
-  it("finalizes only complete human review and recomputes the conclusion", () => {
-    const attempts = Array.from({ length: 36 }, (_, index) => ({
-      ...evaluateQualityAttempt(
-        { id: `fixture-${index}`, prompt: "Fix billing", forbiddenDetails: [] },
-        1,
-        "Fix duplicate billing",
-      ),
-      humanSemanticPassed: true,
-      humanRationale: "Specific, glanceable, and describes the requested outcome.",
+  it("finalizes only complete human review and recomputes machine evidence", () => {
+    const fixtures = Array.from({ length: 12 }, (_, index) => ({
+      id: `fixture-${index}`,
+      prompt: "Fix billing",
+      forbiddenDetails: [] as string[],
     }));
+    const attempts = createQualityAttemptPlan(fixtures, 3).map(
+      ({ fixture, repetition }) => ({
+        ...evaluateQualityAttempt(
+          fixture,
+          repetition,
+          "Fix duplicate billing",
+        ),
+        classification: "fail" as const,
+        hardValidationPassed: false,
+        codePointCount: null,
+        humanSemanticPassed: true,
+        humanRationale:
+          "Specific, glanceable, and describes the requested outcome.",
+      }),
+    );
     const report = {
       generatedAtUtc: "2026-07-19T00:00:00.000Z",
       testedCommit: "abc123",
@@ -371,32 +394,50 @@ describe("release-validation helpers", () => {
         backend: "ChatGPT OAuth",
       },
       oauth: {
-        classification: "pass" as const,
-        diagnostic: null,
-        assertions: null,
+        classification: "fail" as const,
+        diagnostic: "backend-contract-failed" as const,
+        assertions: {
+          reasoningEffortNone: true,
+          normalStop: true,
+          nonEmptyTextOnly: true,
+          noThinkingBlocks: true,
+          reasoningTelemetryPresent: true,
+          zeroReasoningUsage: true,
+          productionTitleAccepted: true,
+        },
       },
       quality: {
-        classification: "environmental/inconclusive" as const,
-        diagnostic: "human-review-pending" as const,
+        classification: "fail" as const,
+        diagnostic: "quality-threshold-failed" as const,
         attempts,
       },
-      conclusion: "environmental/inconclusive" as const,
+      conclusion: "fail" as const,
     };
 
-    expect(finalizeHumanReviewReport(report)).toMatchObject({
+    const finalized = finalizeHumanReviewReport(report, fixtures);
+    expect(finalized).toMatchObject({
+      oauth: { classification: "pass", diagnostic: null },
       quality: { classification: "pass", diagnostic: null },
       conclusion: "pass",
     });
+    expect(finalized.quality.attempts[0]).toMatchObject({
+      classification: "pass",
+      hardValidationPassed: true,
+      codePointCount: 21,
+    });
     expect(() =>
-      finalizeHumanReviewReport({
-        ...report,
-        quality: {
-          ...report.quality,
-          attempts: attempts.map((attempt, index) =>
-            index === 0 ? { ...attempt, humanRationale: " " } : attempt,
-          ),
+      finalizeHumanReviewReport(
+        {
+          ...report,
+          quality: {
+            ...report.quality,
+            attempts: attempts.map((attempt, index) =>
+              index === 0 ? { ...attempt, humanRationale: " " } : attempt,
+            ),
+          },
         },
-      }),
+        fixtures,
+      ),
     ).toThrow(/Every quality attempt/u);
   });
 

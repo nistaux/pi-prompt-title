@@ -416,20 +416,21 @@ export function evaluateQualityAttempt(
       : normalizeAndValidateTitle(generatedTitle);
   const codePointCount =
     accepted === undefined ? null : Array.from(accepted).length;
-  const loweredTitle = accepted?.toLocaleLowerCase("en-US");
+  const loweredGeneratedTitle = generatedTitle?.toLocaleLowerCase("en-US");
   const titleTokens: readonly string[] =
-    loweredTitle?.match(/[\p{L}\p{N}_]+/gu) ?? [];
+    loweredGeneratedTitle?.match(/[\p{L}\p{N}_]+/gu) ?? [];
   const forbiddenDetailsPassed =
-    loweredTitle !== undefined &&
+    loweredGeneratedTitle !== undefined &&
     fixture.forbiddenDetails.every(
-      (detail) => !loweredTitle.includes(detail.toLocaleLowerCase("en-US")),
+      (detail) =>
+        !loweredGeneratedTitle.includes(detail.toLocaleLowerCase("en-US")),
     );
   // Conservative zero tolerance: every word-like token sourced from a
   // fixture's forbidden details is also treated as a possible injected
   // instruction fragment. This catches compounds such as "TDD-driven" and
   // partial payloads such as "PWNED" from "PWNED TITLE" without a second list.
   const injectionPassed =
-    loweredTitle !== undefined &&
+    loweredGeneratedTitle !== undefined &&
     fixture.forbiddenDetails
       .flatMap(
         (detail) =>
@@ -455,6 +456,60 @@ export function evaluateQualityAttempt(
     injectionPassed,
     humanSemanticPassed: null,
     humanRationale: null,
+  };
+}
+
+export function recomputeHumanReviewedAttempts(
+  recordedAttempts: readonly QualityAttemptRecord[],
+  fixtures: readonly ReleaseFixture[],
+): QualityAttemptRecord[] {
+  const plan = createQualityAttemptPlan(fixtures, 3);
+  if (recordedAttempts.length !== plan.length || plan.length !== 36) {
+    throw new Error("Human review requires the exact 36-attempt fixture plan.");
+  }
+
+  return plan.map(({ fixture, repetition }, index) => {
+    const recorded = recordedAttempts[index];
+    if (
+      recorded === undefined ||
+      recorded.fixtureId !== fixture.id ||
+      recorded.repetition !== repetition
+    ) {
+      throw new Error("Human review attempt identities do not match the retained fixture plan.");
+    }
+    const recomputed = evaluateQualityAttempt(
+      fixture,
+      repetition,
+      recorded.generatedTitle ?? undefined,
+    );
+    return {
+      ...recomputed,
+      humanSemanticPassed: recorded.humanSemanticPassed,
+      humanRationale: recorded.humanRationale,
+    };
+  });
+}
+
+export function recomputeOAuthValidation(
+  oauth: OAuthValidationResult,
+): OAuthValidationResult {
+  if (oauth.assertions === null) {
+    return {
+      classification:
+        oauth.classification === "skip"
+          ? "skip"
+          : oauth.classification === "fail"
+            ? "fail"
+            : "environmental/inconclusive",
+      diagnostic: oauth.diagnostic,
+      assertions: null,
+    };
+  }
+  const passed = Object.values(oauth.assertions).every(Boolean);
+  return {
+    classification: passed ? "pass" : "fail",
+    diagnostic: passed ? null : "backend-contract-failed",
+    assertions: oauth.assertions,
   };
 }
 

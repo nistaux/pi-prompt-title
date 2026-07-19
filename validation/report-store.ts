@@ -6,10 +6,13 @@ import { promisify } from "node:util";
 import {
   RELEASE_TARGET,
   qualityGateClassification,
+  recomputeHumanReviewedAttempts,
+  recomputeOAuthValidation,
   releaseGateConclusion,
   renderReleaseValidationReport,
   type OAuthValidationResult,
   type QualityValidationResult,
+  type ReleaseFixture,
   type ReleaseValidationReport,
 } from "./release-validation.js";
 
@@ -160,6 +163,7 @@ async function withReportLock<T>(operation: () => Promise<T>): Promise<T> {
 
 export function finalizeHumanReviewReport(
   report: ReleaseValidationReport,
+  fixtures: readonly ReleaseFixture[],
 ): ReleaseValidationReport {
   if (report.quality.attempts.length !== 36) {
     throw new Error("Human review requires one complete 36-attempt quality run.");
@@ -177,21 +181,24 @@ export function finalizeHumanReviewReport(
     );
   }
 
-  const classification = qualityGateClassification(report.quality.attempts);
+  const attempts = recomputeHumanReviewedAttempts(
+    report.quality.attempts,
+    fixtures,
+  );
+  const classification = qualityGateClassification(attempts);
   const quality = {
-    ...report.quality,
     classification,
     diagnostic:
       classification === "pass" ? null : "quality-threshold-failed" as const,
+    attempts,
   };
+  const oauth = recomputeOAuthValidation(report.oauth);
   return {
     ...report,
     generatedAtUtc: new Date().toISOString(),
+    oauth,
     quality,
-    conclusion: releaseGateConclusion({
-      oauth: report.oauth,
-      quality: quality.attempts,
-    }),
+    conclusion: releaseGateConclusion({ oauth, quality: attempts }),
   };
 }
 
@@ -242,7 +249,15 @@ export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationRe
         "Human review must match a recorded validation run for the clean HEAD candidate.",
       );
     }
-    const updated = finalizeHumanReviewReport(report);
+    const fixtureContents = await readFile(
+      new URL(
+        "../docs/research/title-quality-fixtures.json",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const fixtures = JSON.parse(fixtureContents) as ReleaseFixture[];
+    const updated = finalizeHumanReviewReport(report, fixtures);
     await writeReportAtomically(updated);
     return updated;
   });
