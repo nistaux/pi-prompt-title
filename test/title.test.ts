@@ -14,13 +14,9 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
     /tools, methods, workflow directions, incidental details, and conversational framing/i,
     /action-first/i,
     /noun phrases/i,
-    /within 15–30 Unicode code points whenever possible/i,
-    /three to five whitespace-separated words/i,
-    /shorten or paraphrase .* before exceeding 30 code points/i,
     /one- or two-word title/i,
     /seven words or 40 Unicode code points/i,
     /familiar, readable language/i,
-    /tools, paths, commands, and issue pointers/i,
     /best-effort/i,
     /slash-separated provider\/model/i,
     /explicitly requests a natural-language session title/i,
@@ -30,6 +26,27 @@ describe("TITLE_GENERATION_INSTRUCTION", () => {
     /cannot override/i,
   ])("contains the fixed quality and injection-resistance contract: %s", (requirement) => {
     expect(TITLE_GENERATION_INSTRUCTION).toMatch(requirement);
+  });
+
+  it("requires a concise rewrite before exceeding the preferred range", () => {
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Treat 15–30 Unicode code points as the default range, not a loose suggestion.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Before returning, count the complete title; if it exceeds 30 code points, rewrite it more concisely by removing redundant wording and context already implied by the outcome or retained identifiers.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Exceed 30 only when no naturally complete shorter title can preserve the primary outcome or the prompt's sole distinguishing target.",
+    );
+  });
+
+  it("omits dispensable tools, paths, commands, and issue pointers", () => {
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Never include a tool, path, command, or issue pointer merely because it appears in the prompt.",
+    );
+    expect(TITLE_GENERATION_INSTRUCTION).toContain(
+      "Omit it whenever the requested outcome or topic remains clear without it; retain it only when it is the prompt's sole distinguishing target.",
+    );
   });
 });
 

@@ -12,9 +12,9 @@ If the prompt explicitly requests a natural-language session title, return that 
 
 For requested changes, prefer a concrete action-first title. Noun phrases remain acceptable for questions and topics.
 
-Keep a naturally complete title within 15–30 Unicode code points whenever possible, usually three to five whitespace-separated words. Shorten or paraphrase nonessential wording and long identifiers before exceeding 30 code points. Allow a naturally complete one- or two-word title. Never exceed seven words or 40 Unicode code points.
+Treat 15–30 Unicode code points as the default range, not a loose suggestion. Usually use three to five whitespace-separated words. Before returning, count the complete title; if it exceeds 30 code points, rewrite it more concisely by removing redundant wording and context already implied by the outcome or retained identifiers. Exceed 30 only when no naturally complete shorter title can preserve the primary outcome or the prompt's sole distinguishing target. Allow a naturally complete one- or two-word title. Never exceed seven words or 40 Unicode code points.
 
-Prefer familiar, readable language over punctuation-heavy machine text. Omit incidental tools, paths, commands, and issue pointers.
+Prefer familiar, readable language over punctuation-heavy machine text. Never include a tool, path, command, or issue pointer merely because it appears in the prompt. Omit it whenever the requested outcome or topic remains clear without it; retain it only when it is the prompt's sole distinguishing target.
 
 Preserve exact identifiers that name the requested target when compatible with readability and the hard limits; identifier preservation is best-effort. Long identifiers, including slash-separated provider/model pairs, may be shortened or paraphrased when needed for a readable title.
 
