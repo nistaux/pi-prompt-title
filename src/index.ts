@@ -1,15 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { complete } from "@earendil-works/pi-ai/compat";
+import type { ExtensionFactory } from "@earendil-works/pi-coding-agent";
 import type {
-  ExtensionAPI,
-  ExtensionContext,
-  ExtensionFactory,
-} from "@earendil-works/pi-coding-agent";
-import {
-  attemptTitleGeneration,
-  type TimerCapability,
-  type TitleModelCapability,
-} from "./attempt.js";
+  PiPromptTitleDependencies,
+  PiPromptTitleRuntime,
+} from "./lifecycle.js";
+import { oneShotSessionTitleRuntime } from "./lifecycle.js";
 import {
   createSessionConfigurationCapability,
   loadSessionConfiguration,
@@ -50,25 +46,12 @@ export {
 } from "./title.js";
 export type { TitleCompletion } from "./title.js";
 
-export interface UiDiagnosticsCapability {
-  publish(ctx: ExtensionContext, message: string | undefined): void;
-}
-
-export interface PiPromptTitleDependencies {
-  titleModel: TitleModelCapability;
-  timer: TimerCapability;
-  configurationFiles: ConfigurationFileCapability;
-  uiDiagnostics: UiDiagnosticsCapability;
-}
-
-export interface PiPromptTitleCapabilities extends PiPromptTitleDependencies {
-  lifecycle: Pick<ExtensionAPI, "on" | "getSessionName" | "setSessionName">;
-  sessionConfiguration: SessionConfigurationCapability;
-}
-
-export type PiPromptTitleRuntime = (
-  capabilities: PiPromptTitleCapabilities,
-) => void | Promise<void>;
+export type {
+  PiPromptTitleCapabilities,
+  PiPromptTitleDependencies,
+  PiPromptTitleRuntime,
+  UiDiagnosticsCapability,
+} from "./lifecycle.js";
 
 export interface PiPromptTitleExtensionOptions {
   runtime?: PiPromptTitleRuntime;
@@ -95,52 +78,6 @@ const productionDependencies: PiPromptTitleDependencies = {
       );
     },
   },
-};
-
-const oneShotSessionTitleRuntime: PiPromptTitleRuntime = (capabilities) => {
-  let sessionConfiguration: TitleGenerationConfiguration | undefined;
-  let armed = false;
-
-  capabilities.sessionConfiguration.subscribe((state) => {
-    sessionConfiguration = state.configuration;
-  });
-
-  capabilities.lifecycle.on("session_start", (_event, ctx) => {
-    const configuration = sessionConfiguration;
-    if (configuration?.enabled !== true) {
-      armed = false;
-      return;
-    }
-
-    const sessionTitle = capabilities.lifecycle.getSessionName();
-    const hasPriorUserMessage = ctx.sessionManager.getBranch().some(
-      (entry) =>
-        entry.type === "message" && entry.message.role === "user",
-    );
-
-    armed =
-      (sessionTitle === undefined || sessionTitle.length === 0) &&
-      !hasPriorUserMessage;
-  });
-
-  capabilities.lifecycle.on("before_agent_start", (event, ctx) => {
-    const configuration = sessionConfiguration;
-    if (!armed || configuration === undefined || !/\S/u.test(event.prompt)) {
-      return;
-    }
-
-    // Consume the session's only opportunity before any fallible asynchronous work.
-    armed = false;
-    void attemptTitleGeneration(event.prompt, configuration, {
-      modelRegistry: ctx.modelRegistry,
-      titleModel: capabilities.titleModel,
-      timer: capabilities.timer,
-    })
-      .then((title) => {
-        if (title !== undefined) capabilities.lifecycle.setSessionName(title);
-      })
-      .catch(() => undefined);
-  });
 };
 
 export function createPiPromptTitleExtension(
