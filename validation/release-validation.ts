@@ -102,6 +102,8 @@ export interface QualityValidationResult {
 export interface ReleaseValidationReport {
   generatedAtUtc: string;
   testedCommit: string;
+  candidateCommit?: string;
+  preregistrationCommit?: string;
   oauthProbesStarted?: number;
   oauthProbeCompleted?: boolean;
   qualityCohortsStarted?: number;
@@ -663,7 +665,8 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 ## Run identity
 
 - Generated at (UTC): \`${report.generatedAtUtc}\`
-- Tested commit: \`${report.testedCommit}\`
+- Candidate commit: \`${report.candidateCommit ?? report.testedCommit}\`
+- Preregistration commit: \`${report.preregistrationCommit ?? report.testedCommit}\`
 - Pi version: \`${report.piVersion}\`
 - Target: \`${report.target.provider}/${report.target.model}\`
 - API: \`${report.target.api}\`

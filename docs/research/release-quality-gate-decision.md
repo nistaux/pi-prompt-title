@@ -1,8 +1,8 @@
-# Release-quality gate decision for issue #37
+# Release-quality gate decision
 
 ## Decision
 
-**Approved decision:** freeze the restored production instruction and amend issues #16/#26 so the 15–30-code-point result remains a mandatory per-attempt and aggregate diagnostic, but is not an independent machine release blocker. Preserve 36/36 hard validity, zero forbidden/injected details, the complete 36-title human review, and the 33/36 human semantic/glanceability threshold.
+**Approved decision:** freeze the restored production instruction and amend [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16) and [Add and record credential-gated release validation](https://github.com/nistaux/pi-prompt-title/issues/26) so the 15–30-code-point result remains a mandatory per-attempt and aggregate diagnostic, but is not an independent machine release blocker. Preserve 36/36 hard validity, zero forbidden/injected details, the complete 36-title human review, and the 33/36 human semantic/glanceability threshold.
 
 The owner approved this product-policy amendment after reviewing its practical effect. It is not an instruction correction or a human judgment. No live gate or human review was performed during the research phase.
 
@@ -29,25 +29,25 @@ The latest retained run’s four preferred-length misses are concentrated in two
 1. **Prompt quality was an initial contributor.** Early runs had rename, path, hard-limit, and verbosity failures. General instruction corrections improved those failure modes.
 2. **Further prompt-only tuning is not an established fix.** Reactive tightening produced new regressions, and restoring the only passing instruction still yielded 32/36. The same known fixtures are now development evidence rather than a clean holdout.
 3. **Model stochasticity is materially involved.** OpenAI documents non-deterministic generated output and recommends representative, continuous evals rather than relying on isolated examples. The three identical-instruction cohorts directly demonstrate output variation in this repository.
-4. **The single-run threshold is the immediate blocker.** The difference between 32/36 and 33/36 is one sampled output, yet it flips release status. Issue #16 defines no target population, sampling frame, confidence level, or inferential rule. NIST’s guidance for binomial proportions uses confidence intervals rather than treating a small sample proportion as the true rate.
+4. **The single-run threshold is the immediate blocker.** The difference between 32/36 and 33/36 is one sampled output, yet it flips release status. [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16) defines no target population, sampling frame, confidence level, or inferential rule. NIST’s guidance for binomial proportions uses confidence intervals rather than treating a small sample proportion as the true rate.
 5. **Fixture/policy interaction makes the cliff especially brittle.** One systematically difficult fixture can consume all three allowed misses; one additional stochastic miss then fails the cohort.
 6. **Semantic quality is unknown.** No human judgments exist. Machine length results cannot be substituted for the required human assessment of specificity, glanceability, and primary-topic fit.
 
 ## Options
 
-| Option | #16 status | Privacy/cost/compatibility and evidence consequences |
+| Option | Product-contract status | Privacy/cost/compatibility and evidence consequences |
 | --- | --- | --- |
 | Systematic instruction research with preregistered development and unseen holdout fixtures | Preserves runtime/product boundaries; changes the research process only | Same production privacy/model/retry behavior, but more live cost. It needs new fixtures, fixed candidates/cohorts, and no stopping on a pass. Further tuning on the current 12 fixtures risks overfitting. |
 | Change the default model or reasoning mode | Amends default model/backend/no-reasoning guarantees | Requires new authentication, cost, compatibility, payload, documentation, and complete release evidence. No comparative evidence currently supports a replacement. |
 | Lower 33/36 to 32/36 | Amends the release threshold | Minimal implementation impact but post-hoc and still a one-output cliff. Not recommended. |
 | Use a larger/statistical gate | Amends attempt count and acceptance contract | More cost and human-review burden; requires an owner-defined target population, minimum rate, confidence rule, fixed sample, and cluster-aware design. Current evidence cannot supply those product choices. |
-| Retry, fallback, truncate, repair, or fixture-specific logic | Amends core one-shot/privacy-cost/no-repair guarantees | Explicitly conflicts with #16 and changes runtime behavior. Reject. |
+| Retry, fallback, truncate, repair, or fixture-specific logic | Amends core one-shot/privacy-cost/no-repair guarantees | Explicitly conflicts with [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16) and changes runtime behavior. Reject. |
 | Remove/replace difficult retained fixtures | Amends the representative gate | Destroys comparability and hides known edge cases. Reject. |
 | Keep preferred length diagnostic; retain hard, exclusion, and human gates | Narrowly amends release policy only | Production privacy, cost, compatibility, exact model, one-shot behavior, validation, and retry/fallback remain unchanged. It aligns release blocking with the 40-code-point runtime limit and the explicit human glanceability gate. |
 
 ## Recommended contract amendment
 
-Apply this change to issue #16’s representative quality gate and mirror it in #26:
+Apply this change to the representative quality gate in [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16) and mirror it in [Add and record credential-gated release validation](https://github.com/nistaux/pi-prompt-title/issues/26):
 
 ```diff
  Run the retained 12 fixtures with three isolated one-attempt calls each,
@@ -109,9 +109,9 @@ Making preferred length diagnostic could allow more 31–40-code-point titles th
 
 ## Primary sources and repository evidence
 
-- [Issue #16: authoritative product/release contract](https://github.com/nistaux/pi-prompt-title/issues/16)
-- [Issue #26: harness and retained-run history](https://github.com/nistaux/pi-prompt-title/issues/26)
-- [Issue #37: instruction history and escalation](https://github.com/nistaux/pi-prompt-title/issues/37)
+- [Implement automatic asynchronous Pi session titles](https://github.com/nistaux/pi-prompt-title/issues/16) — authoritative product/release contract
+- [Add and record credential-gated release validation](https://github.com/nistaux/pi-prompt-title/issues/26) — harness and retained-run history
+- [Correct title instruction after failed release quality gate](https://github.com/nistaux/pi-prompt-title/issues/37) — instruction history and escalation
 - [Current retained report at historical evidence commit](https://github.com/nistaux/pi-prompt-title/blob/5c58c01/docs/validation/release-validation.md)
 - [Representative fixtures](./title-quality-fixtures.json)
 - [Prototype findings](./title-quality-prototype.md)

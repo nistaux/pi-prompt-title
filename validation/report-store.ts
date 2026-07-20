@@ -259,6 +259,8 @@ async function emptyReport(
   return {
     generatedAtUtc,
     testedCommit,
+    candidateCommit: testedCommit,
+    preregistrationCommit: testedCommit,
     oauthProbesStarted: 0,
     oauthProbeCompleted: false,
     qualityCohortsStarted: 0,
@@ -539,7 +541,7 @@ async function baseReport(
   if (
     existing !== undefined &&
     existing.testedCommit !== "not-run" &&
-    existing.testedCommit !== testedCommit
+    (existing.preregistrationCommit ?? existing.testedCommit) !== testedCommit
   ) {
     throw new Error(
       "Recorded evidence belongs to a different commit; reset the report and run a fresh complete candidate validation.",
@@ -725,6 +727,9 @@ export async function beginOAuthValidation(): Promise<ReleaseValidationReport> {
     };
     const updated: ReleaseValidationReport = {
       ...report,
+      testedCommit: manifest.candidateCommit,
+      candidateCommit: manifest.candidateCommit,
+      preregistrationCommit: testedCommit,
       oauthProbesStarted: (report.oauthProbesStarted ?? 0) + 1,
       oauthProbeCompleted: false,
       oauth,
@@ -928,7 +933,7 @@ async function readCommittedMachineReport(
     const report = parseReport(markdown);
     if (
       report !== undefined &&
-      report.testedCommit === testedCommit &&
+      (report.preregistrationCommit ?? report.testedCommit) === testedCommit &&
       report.quality.attempts.length === 36 &&
       report.oauthProbeCompleted !== false &&
       report.qualityCohortCompleted !== false
@@ -950,9 +955,11 @@ export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationRe
         "Human review must match a recorded validation run for the candidate.",
       );
     }
-    await assertRecordedCandidateHistory(report.testedCommit, currentCommit);
+    const preregistrationCommit =
+      report.preregistrationCommit ?? report.testedCommit;
+    await assertRecordedCandidateHistory(preregistrationCommit, currentCommit);
     const committed = await readCommittedMachineReport(
-      report.testedCommit,
+      preregistrationCommit,
       currentCommit,
     );
     assertHumanReviewMachineEvidenceUnchanged(committed, report);

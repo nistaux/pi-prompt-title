@@ -433,6 +433,9 @@ describe("release-validation helpers", () => {
     });
 
     expect(report).toContain("# Release validation");
+    expect(report).toContain("Candidate commit: `abc123`");
+    expect(report).toContain("Preregistration commit: `abc123`");
+    expect(report).not.toContain("Tested commit:");
     expect(report).toContain("humanSemanticPassed");
     expect(report).toContain(
       "Preferred 15–30 code points: 1/36 (diagnostic; human review evaluates glanceability)",
