@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { createLiveValidationCapabilities } from "./live-runtime.js";
-import { recordOAuthValidation } from "./report-store.js";
+import {
+  beginOAuthValidation,
+  recordOAuthValidation,
+} from "./report-store.js";
 import {
   runOAuthProbe,
   type OAuthValidationResult,
@@ -8,6 +11,7 @@ import {
 
 describe("credential-gated ChatGPT OAuth release validation", () => {
   it("uses the production full-completion path with explicit no reasoning", async () => {
+    await beginOAuthValidation();
     let result: OAuthValidationResult;
     try {
       const capabilities = await createLiveValidationCapabilities();

@@ -101,6 +101,10 @@ export interface QualityValidationResult {
 export interface ReleaseValidationReport {
   generatedAtUtc: string;
   testedCommit: string;
+  oauthProbesStarted?: number;
+  oauthProbeCompleted?: boolean;
+  qualityCohortsStarted?: number;
+  qualityCohortCompleted?: boolean;
   piVersion: string;
   target: {
     provider: string;
@@ -314,6 +318,9 @@ export async function runQualityValidation(
   repetitions: number,
   registry: ReleaseModelRegistry,
   complete: TitleModelCompletion,
+  onAttemptRecorded: (
+    attempts: readonly QualityAttemptRecord[],
+  ) => Promise<void> = async () => undefined,
 ): Promise<QualityValidationResult> {
   const preflight = await preflightReleaseTarget(registry);
   if (preflight.classification !== "pass") {
@@ -370,6 +377,7 @@ export async function runQualityValidation(
         missingClassification,
       ),
     );
+    await onAttemptRecorded([...attempts]);
   }
 
   const classification = qualityGateClassification(attempts);
@@ -537,9 +545,6 @@ export function qualityGateClassification(
   ) {
     return "fail";
   }
-  if (attempts.filter((attempt) => attempt.preferredLengthPassed).length < 33) {
-    return "fail";
-  }
   if (
     attempts.some(
       (attempt) =>
@@ -600,10 +605,10 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 
 ## Commands, prerequisites, and classification
 
-- \`npm run validate:oauth\` runs one live OAuth probe.
-- \`npm run validate:quality\` runs one fresh, complete set of 36 live quality attempts.
+- \`npm run validate:oauth\` runs the one preregistered live OAuth probe.
+- \`npm run validate:quality\` runs the one preregistered, complete set of 36 live quality attempts.
 - \`npm run validate:review\` performs only offline recomputation after a human edits all 36 embedded JSON judgments and rationales; it makes no model or network call and is not an LLM judge.
-- After committing failed or stale evidence for history, \`npm run validate:reset\` prepares this report for both fresh gates against a new candidate.
+- After committing failed or stale evidence for history, \`npm run validate:reset\` prepares this report and its run manifest for both fresh gates against a new production fingerprint. Commit both files before either live command. A started probe or cohort cannot be replaced by resetting the same fingerprint.
 - Live prerequisites: Pi 0.80.10, stored ChatGPT OAuth authentication for exact \`openai-codex/gpt-5.4-mini\`, network access, and available provider quota/allowance.
 - Taxonomy: \`pass\`, \`fail\`, \`skip\`, and \`environmental/inconclusive\`. Missing authentication is \`skip\`; transient network/quota/provider failures may be \`environmental/inconclusive\`; neither satisfies the release gate.
 
@@ -628,14 +633,14 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 - Sanitized diagnostic: \`${report.quality.diagnostic ?? "none"}\`
 - Attempts recorded: ${report.quality.attempts.length}/36
 - Hard validation: ${hard}/36 (required 36)
-- Preferred 15–30 code points: ${preferred}/36 (required at least 33)
+- Preferred 15–30 code points: ${preferred}/36 (diagnostic; human review evaluates glanceability)
 - Forbidden-detail exclusion: ${forbidden}/36 (required 36)
 - Injection/token-fragment exclusion: ${injection}/36 (required 36)
 - Human semantic review: ${humanReviewed}/36 reviewed with non-empty rationales; ${humanPassed}/36 passed (required at least 33)
 
 ## Human semantic-review procedure
 
-Commit the freshly recorded machine evidence before human review. A human reviewer must then inspect all 36 generated titles against the corresponding retained fixture and edit only the embedded \`humanSemanticPassed\` and \`humanRationale\` fields below. Set every judgment to \`true\` or \`false\` and every rationale to a non-empty short explanation stating whether the title is specific, glanceable, and descriptive of the primary requested outcome or topic. Then run \`npm run validate:review\` to verify the machine evidence against its first committed report and atomically rerender the report. Exact-identifier-only requirements are informational and excluded from the semantic threshold. Do not use an LLM judge, retry, replace, omit, repair, or selectively rerun an attempt. A pending judgment or rationale keeps the final gate environmental/inconclusive.
+Human review is permitted only after all 36 titles pass hard validation, forbidden-detail exclusion, and injection exclusion. Commit the freshly recorded complete machine evidence before human review. A human reviewer must then inspect all 36 generated titles against the corresponding retained fixture and edit only the embedded \`humanSemanticPassed\` and \`humanRationale\` fields below. Set every judgment to \`true\` or \`false\` and every rationale to a non-empty short explanation stating whether the title is specific, glanceable, and descriptive of the primary requested outcome or topic. Then run \`npm run validate:review\` to verify the machine evidence against its first committed report and atomically rerender the report. Exact-identifier-only requirements are informational and excluded from the semantic threshold. Do not use an LLM judge, retry, replace, omit, repair, or selectively rerun an attempt. A pending judgment or rationale keeps the final gate environmental/inconclusive.
 
 ## Final release gate
 

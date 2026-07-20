@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { createLiveValidationCapabilities } from "./live-runtime.js";
-import { recordQualityValidation } from "./report-store.js";
+import {
+  beginQualityValidation,
+  checkpointQualityValidation,
+  recordQualityValidation,
+} from "./report-store.js";
 import {
   createQualityAttemptPlan,
   runQualityValidation,
@@ -22,6 +26,7 @@ async function retainedFixtures(): Promise<ReleaseFixture[]> {
 
 describe("credential-gated representative title-quality validation", () => {
   it("records exactly three isolated sequential attempts for each retained fixture", async () => {
+    await beginQualityValidation();
     const fixtures = await retainedFixtures();
     expect(fixtures, "The retained fixture set must contain exactly 12 inputs.")
       .toHaveLength(12);
@@ -35,6 +40,9 @@ describe("credential-gated representative title-quality validation", () => {
         3,
         capabilities.registry,
         capabilities.complete,
+        async (attempts) => {
+          await checkpointQualityValidation(attempts);
+        },
       );
     } catch {
       result = {

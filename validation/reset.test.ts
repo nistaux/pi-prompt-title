@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { writeInitialReport } from "./report-store.js";
 
 describe("offline release-validation report reset", () => {
-  it("resets committed historical evidence before a fresh candidate run", async () => {
+  it("prepares preregistered evidence for a fresh production fingerprint", async () => {
     await writeInitialReport();
     expect(true).toBe(true);
     console.log(
-      "RESET: release report is ready for fresh OAuth and quality validation.",
+      "PREPARED: commit the release report and run manifest before live validation.",
     );
   });
 });

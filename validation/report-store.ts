@@ -1,8 +1,10 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
+import { TITLE_GENERATION_INSTRUCTION } from "../src/index.js";
 import {
   RELEASE_TARGET,
   qualityGateClassification,
@@ -11,6 +13,7 @@ import {
   releaseGateConclusion,
   renderReleaseValidationReport,
   type OAuthValidationResult,
+  type QualityAttemptRecord,
   type QualityValidationResult,
   type ReleaseFixture,
   type ReleaseValidationReport,
@@ -23,7 +26,194 @@ const reportUrl = new URL(
 );
 const reportPath = fileURLToPath(reportUrl);
 const reportRepositoryPath = "docs/validation/release-validation.md";
+const manifestUrl = new URL(
+  "../docs/validation/release-validation-manifest.json",
+  import.meta.url,
+);
+const manifestPath = fileURLToPath(manifestUrl);
+const manifestRepositoryPath =
+  "docs/validation/release-validation-manifest.json";
+const fixtureUrl = new URL(
+  "../docs/research/title-quality-fixtures.json",
+  import.meta.url,
+);
 const lockPath = `${reportPath}.lock`;
+
+export interface ReleaseRunManifest {
+  schema: 1;
+  createdAtUtc: string;
+  candidateCommit: string;
+  instructionSha256: string;
+  fixtureSetSha256: string;
+  target: {
+    provider: string;
+    model: string;
+    api: string;
+    baseUrl: string;
+    backend: string;
+  };
+  plannedOAuthProbes: 1;
+  plannedQualityCohorts: 1;
+}
+
+export function createReleaseRunManifest(input: {
+  candidateCommit: string;
+  createdAtUtc: string;
+  instruction: string;
+  fixtureSetContents: string;
+}): ReleaseRunManifest {
+  const sha256 = (value: string) =>
+    createHash("sha256").update(value, "utf8").digest("hex");
+  return {
+    schema: 1,
+    createdAtUtc: input.createdAtUtc,
+    candidateCommit: input.candidateCommit,
+    instructionSha256: sha256(input.instruction),
+    fixtureSetSha256: sha256(input.fixtureSetContents),
+    target: {
+      provider: RELEASE_TARGET.provider,
+      model: RELEASE_TARGET.model,
+      api: RELEASE_TARGET.api,
+      baseUrl: RELEASE_TARGET.baseUrl,
+      backend: RELEASE_TARGET.backend,
+    },
+    plannedOAuthProbes: 1,
+    plannedQualityCohorts: 1,
+  };
+}
+
+export function assertOAuthProbeAvailable(
+  report: { oauthProbesStarted?: number },
+  manifest: ReleaseRunManifest,
+): void {
+  if ((report.oauthProbesStarted ?? 0) >= manifest.plannedOAuthProbes) {
+    throw new Error("The planned OAuth probe has already started.");
+  }
+}
+
+export function assertQualityCheckpointProgress(
+  previous: readonly QualityAttemptRecord[],
+  next: readonly QualityAttemptRecord[],
+): void {
+  if (next.length !== previous.length + 1) {
+    throw new Error("A quality checkpoint must append exactly one attempt.");
+  }
+  if (
+    JSON.stringify(next.slice(0, previous.length)) !== JSON.stringify(previous)
+  ) {
+    throw new Error("A quality checkpoint must preserve its immutable prefix.");
+  }
+}
+
+export function assertQualityCohortAvailable(
+  report: { qualityCohortsStarted?: number },
+  manifest: ReleaseRunManifest,
+): void {
+  if ((report.qualityCohortsStarted ?? 0) >= manifest.plannedQualityCohorts) {
+    throw new Error("The planned quality cohort has already started.");
+  }
+}
+
+function productionFingerprint(manifest: ReleaseRunManifest): string {
+  return JSON.stringify({
+    candidateCommit: manifest.candidateCommit,
+    instructionSha256: manifest.instructionSha256,
+    fixtureSetSha256: manifest.fixtureSetSha256,
+    target: manifest.target,
+  });
+}
+
+function runMarkerRef(
+  manifest: ReleaseRunManifest,
+  kind: "oauth" | "quality",
+): string {
+  const fingerprint = createHash("sha256")
+    .update(productionFingerprint(manifest), "utf8")
+    .digest("hex");
+  return `refs/pi-prompt-title/release-validation/${fingerprint}/${kind}`;
+}
+
+async function reserveRunMarker(
+  manifest: ReleaseRunManifest,
+  kind: "oauth" | "quality",
+): Promise<void> {
+  try {
+    await execFileAsync("git", [
+      "update-ref",
+      runMarkerRef(manifest, kind),
+      "HEAD",
+      "0000000000000000000000000000000000000000",
+    ]);
+  } catch {
+    throw new Error(
+      `The preregistered ${kind} run has already started for this production fingerprint.`,
+    );
+  }
+}
+
+async function assertNoRunMarkers(manifest: ReleaseRunManifest): Promise<void> {
+  for (const kind of ["oauth", "quality"] as const) {
+    try {
+      await execFileAsync("git", [
+        "show-ref",
+        "--verify",
+        "--quiet",
+        runMarkerRef(manifest, kind),
+      ]);
+    } catch {
+      continue;
+    }
+    throw new Error(
+      "Cannot reset evidence for the same production fingerprint after a live run has started.",
+    );
+  }
+}
+
+export function assertExistingEvidencePair(
+  existingReport:
+    | {
+        oauthProbesStarted?: number;
+        qualityCohortsStarted?: number;
+      }
+    | undefined,
+  existingManifest: ReleaseRunManifest | undefined,
+): void {
+  if (existingManifest !== undefined && existingReport === undefined) {
+    throw new Error(
+      "The preregistered release report is missing or malformed; existing evidence cannot be reset.",
+    );
+  }
+  if (
+    existingManifest === undefined &&
+    existingReport !== undefined &&
+    ((existingReport.oauthProbesStarted ?? 0) > 0 ||
+      (existingReport.qualityCohortsStarted ?? 0) > 0)
+  ) {
+    throw new Error(
+      "The release run manifest is missing; existing evidence cannot be reset.",
+    );
+  }
+}
+
+export function assertResetAllowed(input: {
+  existingReport: {
+    oauthProbesStarted?: number;
+    qualityCohortsStarted?: number;
+  };
+  existingManifest: ReleaseRunManifest;
+  nextManifest: ReleaseRunManifest;
+}): void {
+  if (
+    ((input.existingReport.oauthProbesStarted ?? 0) > 0 ||
+      (input.existingReport.qualityCohortsStarted ?? 0) > 0) &&
+    productionFingerprint(input.existingManifest) ===
+      productionFingerprint(input.nextManifest)
+  ) {
+    throw new Error(
+      "Cannot reset evidence for the same production fingerprint after a live probe or cohort has started.",
+    );
+  }
+}
 const dataPattern =
   /<!-- release-validation-data:start -->\s*```json\s*([\s\S]*?)\s*```\s*<!-- release-validation-data:end -->/u;
 
@@ -45,6 +235,10 @@ async function emptyReport(
   return {
     generatedAtUtc,
     testedCommit,
+    oauthProbesStarted: 0,
+    oauthProbeCompleted: false,
+    qualityCohortsStarted: 0,
+    qualityCohortCompleted: false,
     piVersion: await installedPiVersion(),
     target: {
       provider: RELEASE_TARGET.provider,
@@ -128,6 +322,158 @@ async function readExistingReport(): Promise<ReleaseValidationReport | undefined
   }
 }
 
+function parseRunManifest(contents: string): ReleaseRunManifest {
+  const manifest = JSON.parse(contents) as Partial<ReleaseRunManifest>;
+  const expectedKeys = [
+    "candidateCommit",
+    "createdAtUtc",
+    "fixtureSetSha256",
+    "instructionSha256",
+    "plannedOAuthProbes",
+    "plannedQualityCohorts",
+    "schema",
+    "target",
+  ];
+  if (
+    Object.keys(manifest).sort().join(",") !== expectedKeys.join(",") ||
+    manifest.schema !== 1 ||
+    typeof manifest.createdAtUtc !== "string" ||
+    typeof manifest.candidateCommit !== "string" ||
+    !/^[0-9a-f]{40}$/u.test(manifest.candidateCommit) ||
+    typeof manifest.instructionSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(manifest.instructionSha256) ||
+    typeof manifest.fixtureSetSha256 !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(manifest.fixtureSetSha256) ||
+    manifest.plannedOAuthProbes !== 1 ||
+    manifest.plannedQualityCohorts !== 1 ||
+    JSON.stringify(manifest.target) !==
+      JSON.stringify({
+        provider: RELEASE_TARGET.provider,
+        model: RELEASE_TARGET.model,
+        api: RELEASE_TARGET.api,
+        baseUrl: RELEASE_TARGET.baseUrl,
+        backend: RELEASE_TARGET.backend,
+      })
+  ) {
+    throw new Error("The release-validation run manifest is invalid.");
+  }
+  return manifest as ReleaseRunManifest;
+}
+
+async function readExistingRunManifest(): Promise<ReleaseRunManifest | undefined> {
+  try {
+    return parseRunManifest(await readFile(manifestUrl, "utf8"));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+}
+
+async function expectedRunManifest(
+  candidateCommit: string,
+  createdAtUtc: string,
+): Promise<ReleaseRunManifest> {
+  return createReleaseRunManifest({
+    candidateCommit,
+    createdAtUtc,
+    instruction: TITLE_GENERATION_INSTRUCTION,
+    fixtureSetContents: await readFile(fixtureUrl, "utf8"),
+  });
+}
+
+async function currentProductionCandidateCommit(): Promise<string> {
+  const { stdout } = await execFileAsync("git", [
+    "log",
+    "-1",
+    "--format=%H",
+    "HEAD",
+    "--",
+    ".",
+    `:(exclude)${reportRepositoryPath}`,
+    `:(exclude)${manifestRepositoryPath}`,
+  ]);
+  const commit = stdout.trim();
+  if (!/^[0-9a-f]{40}$/u.test(commit)) {
+    throw new Error("Unable to identify the production candidate commit.");
+  }
+  return commit;
+}
+
+async function committedRunContext(): Promise<{
+  manifest: ReleaseRunManifest;
+  testedCommit: string;
+}> {
+  let committedContents: string;
+  try {
+    ({ stdout: committedContents } = await execFileAsync("git", [
+      "show",
+      `HEAD:${manifestRepositoryPath}`,
+    ]));
+  } catch {
+    throw new Error(
+      "Commit the release-validation run manifest before a live gate.",
+    );
+  }
+  const workingContents = await readFile(manifestUrl, "utf8");
+  if (workingContents.trimEnd() !== committedContents.trimEnd()) {
+    throw new Error(
+      "The release-validation run manifest must match committed HEAD.",
+    );
+  }
+  const manifest = parseRunManifest(committedContents);
+  const expected = await expectedRunManifest(
+    manifest.candidateCommit,
+    manifest.createdAtUtc,
+  );
+  if (JSON.stringify(manifest) !== JSON.stringify(expected)) {
+    throw new Error(
+      "The release-validation run manifest does not match the production instruction, fixtures, or target.",
+    );
+  }
+  try {
+    await execFileAsync("git", [
+      "merge-base",
+      "--is-ancestor",
+      manifest.candidateCommit,
+      "HEAD",
+    ]);
+  } catch {
+    throw new Error("The run-manifest candidate must be an ancestor of HEAD.");
+  }
+  const { stdout: changed } = await execFileAsync("git", [
+    "log",
+    "-m",
+    "--format=",
+    "--name-only",
+    `${manifest.candidateCommit}..HEAD`,
+    "--",
+  ]);
+  const changedPaths = changed.split(/\r?\n/u).filter((path) => path !== "");
+  if (
+    changedPaths.some(
+      (path) =>
+        path !== reportRepositoryPath && path !== manifestRepositoryPath,
+    )
+  ) {
+    throw new Error(
+      "Only the committed run manifest and release report may follow the production candidate.",
+    );
+  }
+  const { stdout: testedCommitOutput } = await execFileAsync("git", [
+    "log",
+    "-1",
+    "--format=%H",
+    "HEAD",
+    "--",
+    manifestRepositoryPath,
+  ]);
+  const testedCommit = testedCommitOutput.trim();
+  if (!/^[0-9a-f]{40}$/u.test(testedCommit)) {
+    throw new Error("Unable to identify the committed run-manifest revision.");
+  }
+  return { manifest, testedCommit };
+}
+
 async function baseReport(
   testedCommit: string,
 ): Promise<ReleaseValidationReport> {
@@ -142,10 +488,34 @@ async function baseReport(
       "Recorded evidence belongs to a different commit; reset the report and run a fresh complete candidate validation.",
     );
   }
-  if (existing === undefined || existing.testedCommit === "not-run") {
+  if (existing === undefined) {
+    throw new Error(
+      "The preregistered release report is missing; prepare and commit it before live validation.",
+    );
+  }
+  if (existing.testedCommit === "not-run") {
     return emptyReport(generatedAtUtc, testedCommit);
   }
   return { ...existing, generatedAtUtc };
+}
+
+async function writeManifestAtomically(
+  manifest: ReleaseRunManifest,
+): Promise<void> {
+  const temporaryPath = join(
+    dirname(manifestPath),
+    `.${basename(manifestPath)}.${process.pid}.${Date.now()}.tmp`,
+  );
+  try {
+    await writeFile(
+      temporaryPath,
+      `${JSON.stringify(manifest, null, 2)}\n`,
+      "utf8",
+    );
+    await rename(temporaryPath, manifestPath);
+  } finally {
+    await rm(temporaryPath, { force: true });
+  }
 }
 
 async function writeReportAtomically(
@@ -227,8 +597,25 @@ export function finalizeHumanReviewReport(
   if (report.quality.attempts.length !== 36) {
     throw new Error("Human review requires one complete 36-attempt quality run.");
   }
+  const attempts = recomputeHumanReviewedAttempts(
+    report.quality.attempts,
+    fixtures,
+  );
   if (
-    report.quality.attempts.some(
+    attempts.some(
+      (attempt) =>
+        attempt.classification !== "pass" ||
+        !attempt.hardValidationPassed ||
+        !attempt.forbiddenDetailsPassed ||
+        !attempt.injectionPassed,
+    )
+  ) {
+    throw new Error(
+      "Human review cannot begin until every mandatory machine gate passes.",
+    );
+  }
+  if (
+    attempts.some(
       (attempt) =>
         typeof attempt.humanSemanticPassed !== "boolean" ||
         typeof attempt.humanRationale !== "string" ||
@@ -240,10 +627,6 @@ export function finalizeHumanReviewReport(
     );
   }
 
-  const attempts = recomputeHumanReviewedAttempts(
-    report.quality.attempts,
-    fixtures,
-  );
   const classification = qualityGateClassification(attempts);
   const quality = {
     classification,
@@ -261,14 +644,22 @@ export function finalizeHumanReviewReport(
   };
 }
 
-export async function recordOAuthValidation(
-  oauth: OAuthValidationResult,
-): Promise<ReleaseValidationReport> {
-  const testedCommit = await currentCleanCommit();
+export async function beginOAuthValidation(): Promise<ReleaseValidationReport> {
+  await currentCleanCommit();
+  const { manifest, testedCommit } = await committedRunContext();
   return withReportLock(async () => {
     const report = await baseReport(testedCommit);
+    assertOAuthProbeAvailable(report, manifest);
+    await reserveRunMarker(manifest, "oauth");
+    const oauth: OAuthValidationResult = {
+      classification: "environmental/inconclusive",
+      diagnostic: "provider-request-failed",
+      assertions: null,
+    };
     const updated: ReleaseValidationReport = {
       ...report,
+      oauthProbesStarted: (report.oauthProbesStarted ?? 0) + 1,
+      oauthProbeCompleted: false,
       oauth,
       conclusion: releaseGateConclusion({
         oauth,
@@ -280,18 +671,120 @@ export async function recordOAuthValidation(
   });
 }
 
-export async function recordQualityValidation(
-  quality: QualityValidationResult,
+export async function recordOAuthValidation(
+  oauth: OAuthValidationResult,
 ): Promise<ReleaseValidationReport> {
-  const testedCommit = await currentCleanCommit();
+  await currentCleanCommit();
+  const { testedCommit } = await committedRunContext();
   return withReportLock(async () => {
     const report = await baseReport(testedCommit);
+    if ((report.oauthProbesStarted ?? 0) !== 1 || report.oauthProbeCompleted) {
+      throw new Error("No unfinished preregistered OAuth probe is available.");
+    }
+    const updated: ReleaseValidationReport = {
+      ...report,
+      oauthProbeCompleted: true,
+      oauth,
+      conclusion: releaseGateConclusion({
+        oauth,
+        quality: report.quality.attempts,
+      }),
+    };
+    await writeReportAtomically(updated);
+    return updated;
+  });
+}
+
+export async function beginQualityValidation(): Promise<ReleaseValidationReport> {
+  await currentCleanCommit();
+  const { manifest, testedCommit } = await committedRunContext();
+  return withReportLock(async () => {
+    const report = await baseReport(testedCommit);
+    assertQualityCohortAvailable(report, manifest);
+    await reserveRunMarker(manifest, "quality");
+    const quality: QualityValidationResult = {
+      classification: "environmental/inconclusive",
+      diagnostic: "provider-request-failed",
+      attempts: [],
+    };
+    const updated: ReleaseValidationReport = {
+      ...report,
+      qualityCohortsStarted: (report.qualityCohortsStarted ?? 0) + 1,
+      qualityCohortCompleted: false,
+      quality,
+      conclusion: releaseGateConclusion({
+        oauth: report.oauth,
+        quality: quality.attempts,
+      }),
+    };
+    await writeReportAtomically(updated);
+    return updated;
+  });
+}
+
+export async function checkpointQualityValidation(
+  attempts: readonly QualityAttemptRecord[],
+): Promise<ReleaseValidationReport> {
+  await currentCleanCommit();
+  const { testedCommit } = await committedRunContext();
+  return withReportLock(async () => {
+    const report = await baseReport(testedCommit);
+    if (
+      (report.qualityCohortsStarted ?? 0) !== 1 ||
+      report.qualityCohortCompleted
+    ) {
+      throw new Error("No unfinished preregistered quality cohort is available.");
+    }
+    assertQualityCheckpointProgress(report.quality.attempts, attempts);
+    const quality: QualityValidationResult = {
+      classification: "environmental/inconclusive",
+      diagnostic: "provider-request-failed",
+      attempts: [...attempts],
+    };
     const updated: ReleaseValidationReport = {
       ...report,
       quality,
       conclusion: releaseGateConclusion({
         oauth: report.oauth,
         quality: quality.attempts,
+      }),
+    };
+    await writeReportAtomically(updated);
+    return updated;
+  });
+}
+
+export async function recordQualityValidation(
+  quality: QualityValidationResult,
+): Promise<ReleaseValidationReport> {
+  await currentCleanCommit();
+  const { testedCommit } = await committedRunContext();
+  return withReportLock(async () => {
+    const report = await baseReport(testedCommit);
+    if (
+      (report.qualityCohortsStarted ?? 0) !== 1 ||
+      report.qualityCohortCompleted
+    ) {
+      throw new Error("No unfinished preregistered quality cohort is available.");
+    }
+    const retainedQuality =
+      quality.attempts.length === 0 && report.quality.attempts.length > 0
+        ? { ...quality, attempts: report.quality.attempts }
+        : quality;
+    if (
+      retainedQuality.attempts.length > 0 &&
+      JSON.stringify(retainedQuality.attempts) !==
+        JSON.stringify(report.quality.attempts)
+    ) {
+      throw new Error("Final quality evidence must match retained checkpoints.");
+    }
+    const updated: ReleaseValidationReport = {
+      ...report,
+      qualityCohortCompleted: true,
+      quality: retainedQuality,
+      conclusion: releaseGateConclusion({
+        oauth: report.oauth,
+        quality: retainedQuality.attempts,
       }),
     };
     await writeReportAtomically(updated);
@@ -352,21 +845,28 @@ async function readCommittedMachineReport(
     "--",
     reportRepositoryPath,
   ]);
-  const evidenceCommit = history.split(/\r?\n/u).find((line) => line !== "");
-  if (evidenceCommit === undefined || !/^[0-9a-f]{40}$/u.test(evidenceCommit)) {
-    throw new Error(
-      "Commit the recorded machine evidence before editing human judgments.",
-    );
+  const evidenceCommits = history
+    .split(/\r?\n/u)
+    .filter((line) => /^[0-9a-f]{40}$/u.test(line));
+  for (const evidenceCommit of evidenceCommits) {
+    const { stdout: markdown } = await execFileAsync("git", [
+      "show",
+      `${evidenceCommit}:${reportRepositoryPath}`,
+    ]);
+    const report = parseReport(markdown);
+    if (
+      report !== undefined &&
+      report.testedCommit === testedCommit &&
+      report.quality.attempts.length === 36 &&
+      report.oauthProbeCompleted !== false &&
+      report.qualityCohortCompleted !== false
+    ) {
+      return report;
+    }
   }
-  const { stdout: markdown } = await execFileAsync("git", [
-    "show",
-    `${evidenceCommit}:${reportRepositoryPath}`,
-  ]);
-  const report = parseReport(markdown);
-  if (report === undefined || report.testedCommit !== testedCommit) {
-    throw new Error("Committed machine evidence does not match the tested candidate.");
-  }
-  return report;
+  throw new Error(
+    "Commit complete OAuth and 36-attempt machine evidence before editing human judgments.",
+  );
 }
 
 export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationReport> {
@@ -399,8 +899,29 @@ export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationRe
 }
 
 export async function writeInitialReport(): Promise<void> {
+  await currentCleanCommit();
+  const candidateCommit = await currentProductionCandidateCommit();
+  const createdAtUtc = new Date().toISOString();
+  const nextManifest = await expectedRunManifest(
+    candidateCommit,
+    createdAtUtc,
+  );
+  await assertNoRunMarkers(nextManifest);
   await withReportLock(async () => {
+    const [existingReport, existingManifest] = await Promise.all([
+      readExistingReport(),
+      readExistingRunManifest(),
+    ]);
+    assertExistingEvidencePair(existingReport, existingManifest);
+    if (existingReport !== undefined && existingManifest !== undefined) {
+      assertResetAllowed({
+        existingReport,
+        existingManifest,
+        nextManifest,
+      });
+    }
     const report = await emptyReport("not-run", "not-run");
+    await writeManifestAtomically(nextManifest);
     await writeReportAtomically(report);
   });
 }

@@ -9,6 +9,7 @@ import {
   classifyOAuthEvidence,
   createQualityAttemptPlan,
   evaluateQualityAttempt,
+  qualityGateClassification,
   releaseGateConclusion,
   runOAuthProbe,
   runQualityValidation,
@@ -19,7 +20,12 @@ import {
 import type { TitleModelCompletion } from "../src/index.js";
 import {
   assertCleanCandidateStatus,
+  assertExistingEvidencePair,
   assertHumanReviewCandidateHistory,
+  assertQualityCheckpointProgress,
+  assertQualityCohortAvailable,
+  assertResetAllowed,
+  createReleaseRunManifest,
   assertHumanReviewMachineEvidenceUnchanged,
   finalizeHumanReviewReport,
 } from "../validation/report-store.js";
@@ -213,6 +219,21 @@ describe("release-validation helpers", () => {
     });
   });
 
+  it("treats preferred length as diagnostic after mandatory machine and human gates pass", () => {
+    const reviewed = Array.from({ length: 36 }, (_, index) => ({
+      ...evaluateQualityAttempt(
+        { id: `fixture-${index}`, prompt: "Fix billing", forbiddenDetails: [] },
+        1,
+        index < 32 ? "Fix duplicate billing" : "x".repeat(31),
+      ),
+      humanSemanticPassed: true,
+      humanRationale: "Specific and glanceable description of the requested outcome.",
+    }));
+
+    expect(reviewed.filter((attempt) => attempt.preferredLengthPassed)).toHaveLength(32);
+    expect(qualityGateClassification(reviewed)).toBe("pass");
+  });
+
   it("cannot conclude pass while any human judgment is pending", () => {
     const records = Array.from({ length: 36 }, (_, index) => ({
       ...evaluateQualityAttempt(
@@ -320,9 +341,20 @@ describe("release-validation helpers", () => {
       { id: "second", prompt: "Second", forbiddenDetails: [] },
     ];
 
-    const result = await runQualityValidation(fixtures, 3, registry, completeSpy);
+    const checkpointSpy = vi.fn();
+    const result = await runQualityValidation(
+      fixtures,
+      3,
+      registry,
+      completeSpy,
+      checkpointSpy,
+    );
 
     expect(result.attempts).toHaveLength(6);
+    expect(checkpointSpy).toHaveBeenCalledTimes(6);
+    expect(
+      checkpointSpy.mock.calls.map(([attempts]) => attempts.length),
+    ).toEqual([1, 2, 3, 4, 5, 6]);
     expect(completeSpy).toHaveBeenCalledTimes(6);
     expect(maximumActive).toBe(1);
     expect(result.attempts.every((attempt) => attempt.humanSemanticPassed === null)).toBe(true);
@@ -359,6 +391,10 @@ describe("release-validation helpers", () => {
 
     expect(report).toContain("# Release validation");
     expect(report).toContain("humanSemanticPassed");
+    expect(report).toContain(
+      "Preferred 15–30 code points: 1/36 (diagnostic; human review evaluates glanceability)",
+    );
+    expect(report).not.toContain("Preferred 15–30 code points: 1/36 (required");
     expect(report).toContain("authentication-unavailable");
     expect(report).not.toContain("credential-secret");
     expect(report).not.toContain("header-secret");
@@ -472,6 +508,114 @@ describe("release-validation helpers", () => {
         fixtures,
       ),
     ).toThrow(/Every quality attempt/u);
+    expect(() =>
+      finalizeHumanReviewReport(
+        {
+          ...report,
+          quality: {
+            ...report.quality,
+            attempts: attempts.map((attempt, index) =>
+              index === 0
+                ? { ...attempt, generatedTitle: "x".repeat(41) }
+                : attempt,
+            ),
+          },
+        },
+        fixtures,
+      ),
+    ).toThrow(/mandatory machine gate/u);
+  });
+
+  it("binds a planned live cohort to the candidate, instruction, fixtures, and exact target", () => {
+    const manifest = createReleaseRunManifest({
+      candidateCommit: "a".repeat(40),
+      createdAtUtc: "2026-07-20T00:00:00.000Z",
+      instruction: "fixed title instruction",
+      fixtureSetContents: '[{"id":"fixture"}]',
+    });
+
+    expect(manifest).toMatchObject({
+      schema: 1,
+      candidateCommit: "a".repeat(40),
+      createdAtUtc: "2026-07-20T00:00:00.000Z",
+      target: {
+        provider: "openai-codex",
+        model: "gpt-5.4-mini",
+        api: "openai-codex-responses",
+        baseUrl: "https://chatgpt.com/backend-api",
+        backend: "ChatGPT OAuth",
+      },
+      plannedQualityCohorts: 1,
+    });
+    expect(manifest.instructionSha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(manifest.fixtureSetSha256).toMatch(/^[0-9a-f]{64}$/u);
+    expect(manifest.instructionSha256).not.toBe(manifest.fixtureSetSha256);
+  });
+
+  it("allows checkpoints to append exactly one immutable quality attempt", () => {
+    const first = evaluateQualityAttempt(
+      { id: "fixture", prompt: "Fix billing", forbiddenDetails: [] },
+      1,
+      "Fix duplicate billing",
+    );
+    const second = { ...first, repetition: 2 };
+
+    expect(() => assertQualityCheckpointProgress([first], [first, second]))
+      .not.toThrow();
+    expect(() =>
+      assertQualityCheckpointProgress(
+        [first],
+        [{ ...first, generatedTitle: "Replacement" }, second],
+      ),
+    ).toThrow(/immutable prefix/u);
+    expect(() => assertQualityCheckpointProgress([first], [first]))
+      .toThrow(/exactly one attempt/u);
+  });
+
+  it("rejects missing preregistration artifacts instead of recreating evidence", () => {
+    const manifest = createReleaseRunManifest({
+      candidateCommit: "a".repeat(40),
+      createdAtUtc: "2026-07-20T00:00:00.000Z",
+      instruction: "fixed title instruction",
+      fixtureSetContents: "[]",
+    });
+
+    expect(() => assertExistingEvidencePair(undefined, manifest)).toThrow(
+      /report is missing or malformed/u,
+    );
+    expect(() =>
+      assertExistingEvidencePair({ oauthProbesStarted: 1 }, undefined),
+    ).toThrow(/manifest is missing/u);
+  });
+
+  it("prevents replacing a started cohort for the same production fingerprint", () => {
+    const manifest = createReleaseRunManifest({
+      candidateCommit: "a".repeat(40),
+      createdAtUtc: "2026-07-20T00:00:00.000Z",
+      instruction: "fixed title instruction",
+      fixtureSetContents: "[]",
+    });
+    const report = {
+      qualityCohortsStarted: 1,
+    };
+
+    expect(() => assertQualityCohortAvailable(report, manifest)).toThrow(
+      /planned quality cohort has already started/u,
+    );
+    expect(() =>
+      assertResetAllowed({
+        existingReport: report,
+        existingManifest: manifest,
+        nextManifest: { ...manifest, createdAtUtc: "2026-07-21T00:00:00.000Z" },
+      }),
+    ).toThrow(/same production fingerprint/u);
+    expect(() =>
+      assertResetAllowed({
+        existingReport: report,
+        existingManifest: manifest,
+        nextManifest: { ...manifest, candidateCommit: "b".repeat(40) },
+      }),
+    ).not.toThrow();
   });
 
   it("allows only the tracked report to differ from clean HEAD", () => {

@@ -2,9 +2,9 @@
 
 ## Decision
 
-**Recommendation:** freeze the restored production instruction and amend issues #16/#26 so the 15–30-code-point result remains a mandatory per-attempt and aggregate diagnostic, but is not an independent machine release blocker. Preserve 36/36 hard validity, zero forbidden/injected details, the complete 36-title human review, and the 33/36 human semantic/glanceability threshold.
+**Approved decision:** freeze the restored production instruction and amend issues #16/#26 so the 15–30-code-point result remains a mandatory per-attempt and aggregate diagnostic, but is not an independent machine release blocker. Preserve 36/36 hard validity, zero forbidden/injected details, the complete 36-title human review, and the 33/36 human semantic/glanceability threshold.
 
-This is a product-policy amendment, not an instruction correction or a human judgment. It requires owner approval before implementation. No live gate or human review was performed for this research.
+The owner approved this product-policy amendment after reviewing its practical effect. It is not an instruction correction or a human judgment. No live gate or human review was performed during the research phase.
 
 ## Evidence
 
