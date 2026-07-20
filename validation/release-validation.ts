@@ -77,6 +77,7 @@ export interface OAuthValidationResult {
 export interface QualityAttemptRecord {
   fixtureId: string;
   repetition: number;
+  attemptCompleted?: boolean;
   generatedTitle: string | null;
   classification: ValidationClassification;
   hardValidationPassed: boolean;
@@ -194,10 +195,19 @@ const releaseConfiguration = Object.freeze({
   timeoutMs: 10_000,
 });
 
+const environmentalProviderPattern =
+  /(?:429|quota|rate.?limit|timed?\s*out|timeout|network|econn|fetch failed|temporar|unavailable|50[234])/iu;
+
 function isEnvironmentalProviderFailure(completion: AssistantMessage): boolean {
-  if (completion.stopReason !== "error") return false;
-  return /(?:429|quota|rate.?limit|timed?\s*out|timeout|network|econn|fetch failed|temporar|unavailable|50[234])/iu.test(
-    completion.errorMessage ?? "",
+  return (
+    completion.stopReason === "error" &&
+    environmentalProviderPattern.test(completion.errorMessage ?? "")
+  );
+}
+
+function isEnvironmentalProviderError(error: unknown): boolean {
+  return environmentalProviderPattern.test(
+    error instanceof Error ? error.message : String(error),
   );
 }
 
@@ -212,18 +222,24 @@ function completionWithPayloadObserver(
   complete: TitleModelCompletion,
   observe: (completion: AssistantMessage, effort: unknown) => void,
   onStart: () => void = () => undefined,
+  onError: (environmental: boolean) => void = () => undefined,
 ): TitleModelCompletion {
   return async (model, context, options) => {
     let effort: unknown;
     onStart();
-    const completion = await complete(model, context, {
-      ...options,
-      onPayload(payload) {
-        effort = payloadReasoningEffort(payload);
-      },
-    });
-    observe(completion, effort);
-    return completion;
+    try {
+      const completion = await complete(model, context, {
+        ...options,
+        onPayload(payload) {
+          effort = payloadReasoningEffort(payload);
+        },
+      });
+      observe(completion, effort);
+      return completion;
+    } catch (error) {
+      onError(isEnvironmentalProviderError(error));
+      throw error;
+    }
   };
 }
 
@@ -266,6 +282,7 @@ export async function runOAuthProbe(
   let completionStarted = false;
   let observedCompletion: AssistantMessage | undefined;
   let observedEffort: unknown;
+  let observedErrorEnvironmental: boolean | undefined;
   const observedComplete = completionWithPayloadObserver(
     complete,
     (completion, effort) => {
@@ -274,6 +291,9 @@ export async function runOAuthProbe(
     },
     () => {
       completionStarted = true;
+    },
+    (environmental) => {
+      observedErrorEnvironmental = environmental;
     },
   );
   const acceptedTitle = await attemptTitleGeneration(
@@ -287,15 +307,22 @@ export async function runOAuthProbe(
   );
 
   if (observedCompletion === undefined) {
-    return completionStarted
+    if (!completionStarted) {
+      return {
+        classification: "skip",
+        diagnostic: "authentication-unavailable",
+        assertions: null,
+      };
+    }
+    return observedErrorEnvironmental === false
       ? {
-          classification: "environmental/inconclusive",
-          diagnostic: "provider-request-failed",
+          classification: "fail",
+          diagnostic: "backend-contract-failed",
           assertions: null,
         }
       : {
-          classification: "skip",
-          diagnostic: "authentication-unavailable",
+          classification: "environmental/inconclusive",
+          diagnostic: "provider-request-failed",
           assertions: null,
         };
   }
@@ -336,8 +363,25 @@ export async function runQualityValidation(
     fixtures,
     repetitions,
   )) {
+    attempts.push({
+      fixtureId: fixture.id,
+      repetition,
+      attemptCompleted: false,
+      generatedTitle: null,
+      classification: "environmental/inconclusive",
+      hardValidationPassed: false,
+      codePointCount: null,
+      preferredLengthPassed: false,
+      forbiddenDetailsPassed: false,
+      injectionPassed: false,
+      humanSemanticPassed: null,
+      humanRationale: null,
+    });
+    await onAttemptRecorded([...attempts]);
+
     let completionStarted = false;
     let observedCompletion: AssistantMessage | undefined;
+    let observedErrorEnvironmental: boolean | undefined;
     const observedComplete = completionWithPayloadObserver(
       complete,
       (completion) => {
@@ -345,6 +389,9 @@ export async function runQualityValidation(
       },
       () => {
         completionStarted = true;
+      },
+      (environmental) => {
+        observedErrorEnvironmental = environmental;
       },
     );
     const acceptedTitle = await attemptTitleGeneration(
@@ -363,19 +410,19 @@ export async function runQualityValidation(
         : extractTitleText(observedCompletion);
     const missingClassification: ValidationClassification =
       observedCompletion === undefined
-        ? completionStarted
-          ? "environmental/inconclusive"
-          : "skip"
+        ? !completionStarted
+          ? "skip"
+          : observedErrorEnvironmental === false
+            ? "fail"
+            : "environmental/inconclusive"
         : isEnvironmentalProviderFailure(observedCompletion)
           ? "environmental/inconclusive"
           : "fail";
-    attempts.push(
-      evaluateQualityAttempt(
-        fixture,
-        repetition,
-        acceptedTitle ?? rawTitle,
-        missingClassification,
-      ),
+    attempts[attempts.length - 1] = evaluateQualityAttempt(
+      fixture,
+      repetition,
+      acceptedTitle ?? rawTitle,
+      missingClassification,
     );
     await onAttemptRecorded([...attempts]);
   }
@@ -452,6 +499,7 @@ export function evaluateQualityAttempt(
   return {
     fixtureId: fixture.id,
     repetition,
+    attemptCompleted: true,
     generatedTitle: generatedTitle ?? null,
     classification:
       hardValidationPassed && forbiddenDetailsPassed && injectionPassed

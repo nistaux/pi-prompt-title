@@ -95,14 +95,38 @@ export function assertQualityCheckpointProgress(
   previous: readonly QualityAttemptRecord[],
   next: readonly QualityAttemptRecord[],
 ): void {
-  if (next.length !== previous.length + 1) {
-    throw new Error("A quality checkpoint must append exactly one attempt.");
+  if (next.length === previous.length + 1) {
+    if (
+      JSON.stringify(next.slice(0, previous.length)) !==
+        JSON.stringify(previous) ||
+      next.at(-1)?.attemptCompleted !== false
+    ) {
+      throw new Error(
+        "A quality start checkpoint must append one incomplete attempt to its immutable prefix.",
+      );
+    }
+    return;
   }
-  if (
-    JSON.stringify(next.slice(0, previous.length)) !== JSON.stringify(previous)
-  ) {
-    throw new Error("A quality checkpoint must preserve its immutable prefix.");
+  if (next.length === previous.length && previous.length > 0) {
+    const previousAttempt = previous.at(-1);
+    const nextAttempt = next.at(-1);
+    if (
+      JSON.stringify(next.slice(0, -1)) !==
+        JSON.stringify(previous.slice(0, -1)) ||
+      previousAttempt?.attemptCompleted !== false ||
+      nextAttempt?.attemptCompleted !== true ||
+      previousAttempt.fixtureId !== nextAttempt.fixtureId ||
+      previousAttempt.repetition !== nextAttempt.repetition
+    ) {
+      throw new Error(
+        "A quality completion checkpoint must finalize only its last incomplete attempt and preserve the immutable prefix.",
+      );
+    }
+    return;
   }
+  throw new Error(
+    "A quality checkpoint must start or complete exactly one attempt.",
+  );
 }
 
 export function assertQualityCohortAvailable(
@@ -399,8 +423,38 @@ async function currentProductionCandidateCommit(): Promise<string> {
   return commit;
 }
 
+async function committedPreregistrationReport(
+  testedCommit: string,
+): Promise<ReleaseValidationReport> {
+  let markdown: string;
+  try {
+    ({ stdout: markdown } = await execFileAsync("git", [
+      "show",
+      `${testedCommit}:${reportRepositoryPath}`,
+    ]));
+  } catch {
+    throw new Error(
+      "Commit the initial release report with the run manifest before a live gate.",
+    );
+  }
+  const report = parseReport(markdown);
+  if (
+    report === undefined ||
+    report.testedCommit !== "not-run" ||
+    (report.oauthProbesStarted ?? 0) !== 0 ||
+    (report.qualityCohortsStarted ?? 0) !== 0 ||
+    report.quality.attempts.length !== 0
+  ) {
+    throw new Error(
+      "The committed preregistration report must contain no started live evidence.",
+    );
+  }
+  return report;
+}
+
 async function committedRunContext(): Promise<{
   manifest: ReleaseRunManifest;
+  preregistrationReport: ReleaseValidationReport;
   testedCommit: string;
 }> {
   let committedContents: string;
@@ -471,7 +525,10 @@ async function committedRunContext(): Promise<{
   if (!/^[0-9a-f]{40}$/u.test(testedCommit)) {
     throw new Error("Unable to identify the committed run-manifest revision.");
   }
-  return { manifest, testedCommit };
+  const preregistrationReport = await committedPreregistrationReport(
+    testedCommit,
+  );
+  return { manifest, preregistrationReport, testedCommit };
 }
 
 async function baseReport(
@@ -646,8 +703,18 @@ export function finalizeHumanReviewReport(
 
 export async function beginOAuthValidation(): Promise<ReleaseValidationReport> {
   await currentCleanCommit();
-  const { manifest, testedCommit } = await committedRunContext();
+  const {
+    manifest,
+    preregistrationReport,
+    testedCommit,
+  } = await committedRunContext();
   return withReportLock(async () => {
+    const existing = await readExistingReport();
+    if (JSON.stringify(existing) !== JSON.stringify(preregistrationReport)) {
+      throw new Error(
+        "The first live gate requires the working release report to match its committed preregistration.",
+      );
+    }
     const report = await baseReport(testedCommit);
     assertOAuthProbeAvailable(report, manifest);
     await reserveRunMarker(manifest, "oauth");
@@ -700,6 +767,11 @@ export async function beginQualityValidation(): Promise<ReleaseValidationReport>
   const { manifest, testedCommit } = await committedRunContext();
   return withReportLock(async () => {
     const report = await baseReport(testedCommit);
+    if (!report.oauthProbeCompleted || report.oauth.classification !== "pass") {
+      throw new Error(
+        "The preregistered OAuth probe must pass before the quality cohort starts.",
+      );
+    }
     assertQualityCohortAvailable(report, manifest);
     await reserveRunMarker(manifest, "quality");
     const quality: QualityValidationResult = {

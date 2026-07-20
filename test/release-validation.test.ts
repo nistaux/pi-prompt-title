@@ -299,6 +299,41 @@ describe("release-validation helpers", () => {
     expect(JSON.stringify(result)).not.toMatch(/credential-secret|header-secret|cookie-secret/u);
   });
 
+  it("fails backend rejection but keeps verified transient failures inconclusive", async () => {
+    const model = defaultModel();
+    const registry = {
+      find: vi.fn(() => model),
+      isUsingOAuth: vi.fn(() => true),
+      getApiKeyAndHeaders: vi.fn(async () => ({
+        ok: true as const,
+        apiKey: "credential-secret",
+      })),
+    };
+
+    await expect(
+      runOAuthProbe(
+        registry,
+        vi.fn(async () => {
+          throw new Error("reasoning effort none is unsupported");
+        }),
+      ),
+    ).resolves.toMatchObject({
+      classification: "fail",
+      diagnostic: "backend-contract-failed",
+    });
+    await expect(
+      runOAuthProbe(
+        registry,
+        vi.fn(async () => {
+          throw new Error("network timeout");
+        }),
+      ),
+    ).resolves.toMatchObject({
+      classification: "environmental/inconclusive",
+      diagnostic: "provider-request-failed",
+    });
+  });
+
   it("classifies missing authentication as a sanitized skip before backend checks", async () => {
     const model = defaultModel();
     const completeSpy = vi.fn<TitleModelCompletion>();
@@ -351,10 +386,18 @@ describe("release-validation helpers", () => {
     );
 
     expect(result.attempts).toHaveLength(6);
-    expect(checkpointSpy).toHaveBeenCalledTimes(6);
+    expect(checkpointSpy).toHaveBeenCalledTimes(12);
     expect(
       checkpointSpy.mock.calls.map(([attempts]) => attempts.length),
-    ).toEqual([1, 2, 3, 4, 5, 6]);
+    ).toEqual([1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6]);
+    expect(
+      checkpointSpy.mock.calls.map(([attempts]) =>
+        attempts.at(-1)?.attemptCompleted,
+      ),
+    ).toEqual([
+      false, true, false, true, false, true,
+      false, true, false, true, false, true,
+    ]);
     expect(completeSpy).toHaveBeenCalledTimes(6);
     expect(maximumActive).toBe(1);
     expect(result.attempts.every((attempt) => attempt.humanSemanticPassed === null)).toBe(true);
@@ -552,24 +595,36 @@ describe("release-validation helpers", () => {
     expect(manifest.instructionSha256).not.toBe(manifest.fixtureSetSha256);
   });
 
-  it("allows checkpoints to append exactly one immutable quality attempt", () => {
-    const first = evaluateQualityAttempt(
+  it("checkpoints each started identity before finalizing it", () => {
+    const completed = evaluateQualityAttempt(
       { id: "fixture", prompt: "Fix billing", forbiddenDetails: [] },
       1,
       "Fix duplicate billing",
     );
-    const second = { ...first, repetition: 2 };
+    const started = {
+      ...completed,
+      attemptCompleted: false,
+      generatedTitle: null,
+      classification: "environmental/inconclusive" as const,
+      hardValidationPassed: false,
+      codePointCount: null,
+      preferredLengthPassed: false,
+      forbiddenDetailsPassed: false,
+      injectionPassed: false,
+    };
 
-    expect(() => assertQualityCheckpointProgress([first], [first, second]))
-      .not.toThrow();
+    expect(() => assertQualityCheckpointProgress([], [started])).not.toThrow();
+    expect(() =>
+      assertQualityCheckpointProgress([started], [completed]),
+    ).not.toThrow();
     expect(() =>
       assertQualityCheckpointProgress(
-        [first],
-        [{ ...first, generatedTitle: "Replacement" }, second],
+        [started],
+        [{ ...completed, fixtureId: "replacement" }],
       ),
-    ).toThrow(/immutable prefix/u);
-    expect(() => assertQualityCheckpointProgress([first], [first]))
-      .toThrow(/exactly one attempt/u);
+    ).toThrow(/last incomplete attempt/u);
+    expect(() => assertQualityCheckpointProgress([completed], [completed]))
+      .toThrow(/last incomplete attempt/u);
   });
 
   it("rejects missing preregistration artifacts instead of recreating evidence", () => {
