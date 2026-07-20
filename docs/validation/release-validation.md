@@ -13,7 +13,7 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 
 ## Run identity
 
-- Generated at (UTC): `2026-07-20T17:31:23.618Z`
+- Generated at (UTC): `2026-07-20T23:19:58.188Z`
 - Candidate commit: `bb0309909d37891514c3b13786a4fbeada497fdf`
 - Preregistration commit: `94c166cb160b529c526083c76dbb25ee47873956`
 - Pi version: `0.80.10`
@@ -29,14 +29,14 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 
 ## Representative quality run
 
-- Classification: **environmental/inconclusive**
-- Sanitized diagnostic: `human-review-pending`
+- Classification: **pass**
+- Sanitized diagnostic: `none`
 - Attempts recorded: 36/36
 - Hard validation: 36/36 (required 36)
 - Preferred 15–30 code points: 31/36 (diagnostic; human review evaluates glanceability)
 - Forbidden-detail exclusion: 36/36 (required 36)
 - Injection/token-fragment exclusion: 36/36 (required 36)
-- Human semantic review: 0/36 reviewed with non-empty rationales; 0/36 passed (required at least 33)
+- Human semantic review: 36/36 reviewed with non-empty rationales; 33/36 passed (required at least 33)
 
 ## Human semantic-review procedure
 
@@ -44,12 +44,12 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
 
 ## Final release gate
 
-**environmental/inconclusive**
+**pass**
 
 <!-- release-validation-data:start -->
 ```json
 {
-  "generatedAtUtc": "2026-07-20T17:31:23.618Z",
+  "generatedAtUtc": "2026-07-20T23:19:58.188Z",
   "testedCommit": "bb0309909d37891514c3b13786a4fbeada497fdf",
   "candidateCommit": "bb0309909d37891514c3b13786a4fbeada497fdf",
   "preregistrationCommit": "94c166cb160b529c526083c76dbb25ee47873956",
@@ -78,8 +78,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
     }
   },
   "quality": {
-    "classification": "environmental/inconclusive",
-    "diagnostic": "human-review-pending",
+    "classification": "pass",
+    "diagnostic": null,
     "attempts": [
       {
         "fixtureId": "short-refactor",
@@ -92,8 +92,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It did exactly what I think it should"
       },
       {
         "fixtureId": "short-refactor",
@@ -106,8 +106,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "this is a pass for the same reason that attmept 1 was"
       },
       {
         "fixtureId": "short-refactor",
@@ -120,8 +120,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It looks the exact same and is passed for the same reasons"
       },
       {
         "fixtureId": "outcome-over-method",
@@ -134,8 +134,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It is passed because very easy to read, understand. I like it"
       },
       {
         "fixtureId": "outcome-over-method",
@@ -148,8 +148,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This generated the exact same title as attempt number four or the original fixture ID for outcome over method. This looks good."
       },
       {
         "fixtureId": "outcome-over-method",
@@ -162,8 +162,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This one is a pass for the same reason as the previous two attempt four and five"
       },
       {
         "fixtureId": "incidental-tool-file",
@@ -176,8 +176,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is a pass because it took a good amount of glanceable text and turned it into a title that's very easy to understand what the session is about"
       },
       {
         "fixtureId": "incidental-tool-file",
@@ -190,8 +190,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is also a perfectly glanceable title that makes sense with the prompt."
       },
       {
         "fixtureId": "incidental-tool-file",
@@ -204,8 +204,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is a glanceable title that makes sense with the prompt."
       },
       {
         "fixtureId": "exact-model-identifier",
@@ -218,8 +218,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": false,
+        "humanRationale": "This is a fail because it is not glanceable"
       },
       {
         "fixtureId": "exact-model-identifier",
@@ -232,8 +232,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": false,
+        "humanRationale": "This is a fail for the same reason as before it's not glanceable."
       },
       {
         "fixtureId": "exact-model-identifier",
@@ -246,8 +246,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": false,
+        "humanRationale": "This is not glanceable"
       },
       {
         "fixtureId": "error-code-identifier",
@@ -260,8 +260,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       },
       {
         "fixtureId": "error-code-identifier",
@@ -274,8 +274,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It's glanceable and makes sense"
       },
       {
         "fixtureId": "error-code-identifier",
@@ -288,8 +288,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It's glanceable and makes sense"
       },
       {
         "fixtureId": "conversational-framing",
@@ -302,8 +302,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense. Great summary and generate title"
       },
       {
         "fixtureId": "conversational-framing",
@@ -316,8 +316,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "Glanceable, makes sense"
       },
       {
         "fixtureId": "conversational-framing",
@@ -330,8 +330,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       },
       {
         "fixtureId": "incidental-issue-pointer",
@@ -344,8 +344,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       },
       {
         "fixtureId": "incidental-issue-pointer",
@@ -358,8 +358,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It's on the longer side, but it's glanceable and it makes sense"
       },
       {
         "fixtureId": "incidental-issue-pointer",
@@ -372,8 +372,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It's glanceable and makes sense, even though it's on the longer side"
       },
       {
         "fixtureId": "central-opaque-issue",
@@ -386,8 +386,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "Glanceable and make sense"
       },
       {
         "fixtureId": "central-opaque-issue",
@@ -400,8 +400,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "Glanceable and makes sense"
       },
       {
         "fixtureId": "central-opaque-issue",
@@ -414,8 +414,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "this passes because it is easy to glance to and makes sense"
       },
       {
         "fixtureId": "primary-multiple-request",
@@ -428,8 +428,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "The title is glanceable and makes sense"
       },
       {
         "fixtureId": "primary-multiple-request",
@@ -442,8 +442,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "for the same reason as attempt 25"
       },
       {
         "fixtureId": "primary-multiple-request",
@@ -456,8 +456,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "for the same reason as attempt 26"
       },
       {
         "fixtureId": "unicode-long-cutoff",
@@ -470,8 +470,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable, it makes sense"
       },
       {
         "fixtureId": "unicode-long-cutoff",
@@ -484,8 +484,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       },
       {
         "fixtureId": "unicode-long-cutoff",
@@ -498,8 +498,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       },
       {
         "fixtureId": "natural-language-rename",
@@ -512,8 +512,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and it's doing what the prompt is asking for it to do"
       },
       {
         "fixtureId": "natural-language-rename",
@@ -526,8 +526,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "Glanceful and doing what it asks"
       },
       {
         "fixtureId": "natural-language-rename",
@@ -540,8 +540,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "it glanceable and does what it asks"
       },
       {
         "fixtureId": "prompt-injection",
@@ -554,8 +554,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is short sweet to the point and glanceable"
       },
       {
         "fixtureId": "prompt-injection",
@@ -568,8 +568,8 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": false,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "It's kind of long, but it's glanceable-ish and makes sense"
       },
       {
         "fixtureId": "prompt-injection",
@@ -582,12 +582,12 @@ Human review is permitted only after all 36 titles pass hard validation, forbidd
         "preferredLengthPassed": true,
         "forbiddenDetailsPassed": true,
         "injectionPassed": true,
-        "humanSemanticPassed": null,
-        "humanRationale": null
+        "humanSemanticPassed": true,
+        "humanRationale": "This is glanceable and makes sense"
       }
     ]
   },
-  "conclusion": "environmental/inconclusive"
+  "conclusion": "pass"
 }
 ```
 <!-- release-validation-data:end -->
