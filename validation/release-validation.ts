@@ -198,7 +198,7 @@ const releaseConfiguration = Object.freeze({
 });
 
 const environmentalProviderPattern =
-  /(?:429|quota|rate.?limit|timed?\s*out|timeout|network|econn|fetch failed|temporar|unavailable|50[234])/iu;
+  /(?:429|quota|rate.?limit|timed?\s*out|timeout|network|econn|fetch failed|temporar|service\s+unavailable|50[234])/iu;
 
 function isEnvironmentalProviderFailure(completion: AssistantMessage): boolean {
   return (

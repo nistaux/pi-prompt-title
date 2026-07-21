@@ -28,6 +28,7 @@ import {
   createReleaseRunManifest,
   assertHumanReviewMachineEvidenceUnchanged,
   finalizeHumanReviewReport,
+  selectUniqueCommittedMachineReport,
 } from "../validation/report-store.js";
 
 function defaultModel(): Model<Api> {
@@ -325,7 +326,29 @@ describe("release-validation helpers", () => {
       runOAuthProbe(
         registry,
         vi.fn(async () => {
+          throw new Error("reasoning effort none unavailable");
+        }),
+      ),
+    ).resolves.toMatchObject({
+      classification: "fail",
+      diagnostic: "backend-contract-failed",
+    });
+    await expect(
+      runOAuthProbe(
+        registry,
+        vi.fn(async () => {
           throw new Error("network timeout");
+        }),
+      ),
+    ).resolves.toMatchObject({
+      classification: "environmental/inconclusive",
+      diagnostic: "provider-request-failed",
+    });
+    await expect(
+      runOAuthProbe(
+        registry,
+        vi.fn(async () => {
+          throw new Error("Service unavailable");
         }),
       ),
     ).resolves.toMatchObject({
@@ -528,6 +551,43 @@ describe("release-validation helpers", () => {
         },
       }),
     ).toThrow(/machine evidence must match/u);
+    expect(() =>
+      assertHumanReviewMachineEvidenceUnchanged(committedMachineReport, {
+        ...report,
+        generatedAtUtc: "2026-07-20T00:00:00.000Z",
+        oauth: {
+          ...report.oauth,
+          classification: "pass",
+          diagnostic: null,
+        },
+        quality: {
+          ...report.quality,
+          classification: "pass",
+          diagnostic: null,
+        },
+        conclusion: "pass",
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertHumanReviewMachineEvidenceUnchanged(
+        {
+          ...committedMachineReport,
+          oauth: {
+            classification: "fail",
+            diagnostic: "backend-contract-failed",
+            assertions: null,
+          },
+        },
+        {
+          ...report,
+          oauth: {
+            classification: "skip",
+            diagnostic: "authentication-unavailable",
+            assertions: null,
+          },
+        },
+      ),
+    ).toThrow(/machine evidence must match/u);
 
     const finalized = finalizeHumanReviewReport(report, fixtures);
     expect(finalized).toMatchObject({
@@ -540,6 +600,7 @@ describe("release-validation helpers", () => {
       hardValidationPassed: true,
       codePointCount: 21,
     });
+    expect(finalizeHumanReviewReport(finalized, fixtures)).toEqual(finalized);
     expect(() =>
       finalizeHumanReviewReport(
         {
@@ -690,32 +751,148 @@ describe("release-validation helpers", () => {
     ).toThrow(/clean committed candidate/u);
   });
 
-  it("allows committed report-only evidence between the tested candidate and human review", () => {
+  it("accepts only linear report history or the approved post-evidence correction", () => {
+    const baseHistory = {
+      testedCommit: "94c166cb160b529c526083c76dbb25ee47873956",
+      currentCommit: "b".repeat(40),
+      testedCommitIsAncestor: true,
+      mergeCommits: [] as string[],
+      postEvidenceCorrectionCommits: ["c".repeat(40)],
+      manifestMatchesCurrentFingerprint: true,
+    };
     expect(() =>
       assertHumanReviewCandidateHistory({
-        testedCommit: "a".repeat(40),
-        currentCommit: "b".repeat(40),
-        testedCommitIsAncestor: true,
+        ...baseHistory,
         changedPaths: ["docs/validation/release-validation.md"],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        ...baseHistory,
+        changedPaths: [
+          "docs/validation/release-validation.md",
+          "validation/report-store.ts",
+          "test/release-validation.test.ts",
+          "README.md",
+        ],
       }),
     ).not.toThrow();
 
     expect(() =>
       assertHumanReviewCandidateHistory({
-        testedCommit: "a".repeat(40),
-        currentCommit: "b".repeat(40),
-        testedCommitIsAncestor: true,
+        ...baseHistory,
         changedPaths: ["src/title.ts", "docs/validation/release-validation.md"],
       }),
-    ).toThrow(/only release-report commits/u);
+    ).toThrow(/approved post-evidence correction paths/u);
     expect(() =>
       assertHumanReviewCandidateHistory({
+        ...baseHistory,
+        manifestMatchesCurrentFingerprint: false,
+        changedPaths: ["validation/report-store.ts"],
+      }),
+    ).toThrow(/production fingerprint/u);
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        ...baseHistory,
+        postEvidenceCorrectionCommits: ["c".repeat(40), "d".repeat(40)],
+        changedPaths: ["validation/report-store.ts"],
+      }),
+    ).toThrow(/exactly one approved post-evidence correction commit/u);
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        ...baseHistory,
         testedCommit: "a".repeat(40),
-        currentCommit: "b".repeat(40),
+        changedPaths: ["validation/report-store.ts"],
+      }),
+    ).toThrow(/exactly one approved post-evidence correction commit/u);
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        ...baseHistory,
+        mergeCommits: ["c".repeat(40)],
+        changedPaths: ["docs/validation/release-validation.md"],
+      }),
+    ).toThrow(/merge commits/u);
+    expect(() =>
+      assertHumanReviewCandidateHistory({
+        ...baseHistory,
         testedCommitIsAncestor: false,
         changedPaths: ["docs/validation/release-validation.md"],
       }),
     ).toThrow(/descend from the tested candidate/u);
+  });
+
+  it("requires exactly one complete committed pre-human machine baseline", () => {
+    const fixtures = Array.from({ length: 12 }, (_, index) => ({
+      id: `fixture-${index}`,
+      prompt: "Fix billing",
+      forbiddenDetails: [] as string[],
+    }));
+    const attempts = createQualityAttemptPlan(fixtures, 3).map(
+      ({ fixture, repetition }) =>
+        evaluateQualityAttempt(fixture, repetition, "Fix duplicate billing"),
+    );
+    const baseline = {
+      generatedAtUtc: "2026-07-19T00:00:00.000Z",
+      testedCommit: "a".repeat(40),
+      oauthProbesStarted: 1,
+      oauthProbeCompleted: true,
+      qualityCohortsStarted: 1,
+      qualityCohortCompleted: true,
+      piVersion: "0.80.10",
+      target: {
+        provider: "openai-codex",
+        model: "gpt-5.4-mini",
+        api: "openai-codex-responses",
+        backend: "ChatGPT OAuth",
+      },
+      oauth: {
+        classification: "pass" as const,
+        diagnostic: null,
+        assertions: null,
+      },
+      quality: {
+        classification: "environmental/inconclusive" as const,
+        diagnostic: "human-review-pending" as const,
+        attempts,
+      },
+      conclusion: "environmental/inconclusive" as const,
+    };
+    const finalized = {
+      ...baseline,
+      quality: {
+        ...baseline.quality,
+        attempts: attempts.map((attempt) => ({
+          ...attempt,
+          humanSemanticPassed: true,
+          humanRationale: "Specific and glanceable.",
+        })),
+      },
+    };
+
+    expect(selectUniqueCommittedMachineReport([baseline, finalized])).toBe(
+      baseline,
+    );
+    expect(() => selectUniqueCommittedMachineReport([finalized])).toThrow(
+      /exactly one committed pre-human machine baseline/u,
+    );
+    expect(() =>
+      selectUniqueCommittedMachineReport([
+        { ...baseline, qualityCohortCompleted: false },
+      ]),
+    ).toThrow(/exactly one committed pre-human machine baseline/u);
+    expect(() =>
+      selectUniqueCommittedMachineReport([
+        { ...baseline, oauthProbesStarted: 0 },
+      ]),
+    ).toThrow(/exactly one committed pre-human machine baseline/u);
+    expect(() =>
+      selectUniqueCommittedMachineReport([
+        { ...baseline, qualityCohortsStarted: 2 },
+      ]),
+    ).toThrow(/exactly one committed pre-human machine baseline/u);
+    expect(() =>
+      selectUniqueCommittedMachineReport([baseline, { ...baseline }]),
+    ).toThrow(/exactly one committed pre-human machine baseline/u);
   });
 
   it("does not expose raw provider failures through result construction", () => {

@@ -80,28 +80,9 @@ The anti-retry addition closes a mechanical loophole: the current reset path can
 
 Do not change `TITLE_GENERATION_INSTRUCTION`, fixtures, `normalizeAndValidateTitle()`, the 40-code-point maximum, the exact model/backend, one-shot execution, or the 33/36 human threshold.
 
-## Acceptance criteria after approval
+## Implementation record
 
-1. The approved issue text explicitly records the preferred-length policy amendment and anti-retry evidence rule.
-2. `qualityGateClassification()` cannot fail solely because fewer than 33 titles are in the preferred range.
-3. Reports retain every `codePointCount`, `preferredLengthPassed`, and aggregate preferred count without calling 33 mandatory.
-4. Exactly 36 attempts, 36/36 hard validity, 36/36 forbidden-detail exclusion, and 36/36 injection exclusion remain machine requirements.
-5. All 36 human judgments and non-empty rationales remain required; at least 33/36 must pass semantic/glanceability review.
-6. A committed manifest binds candidate, instruction, fixtures, model/backend, and cohort count before live execution; same-fingerprint reset/rerun cannot replace evidence.
-7. No retry, selective rerun, substitution, fixture removal, deterministic repair, fallback, private prompt, or model/provider change is introduced.
-8. Historical reports remain immutable evidence under the policy active when they ran.
-
-## Validation plan after approval
-
-1. Use TDD at the exported classifier/report-store seams.
-2. Add focused tests for 32 preferred + 33 human passes succeeding; every hard/exclusion failure failing; fewer than 33 human passes failing; pending review remaining inconclusive; and non-36 plans remaining inconclusive.
-3. Add manifest/reset tests proving the same production fingerprint cannot obtain replacement evidence and every started outcome remains retained.
-4. Update report rendering and contributor documentation while preserving preferred-length telemetry.
-5. Run focused tests and typechecking, then `npm run check`.
-6. Commit the deterministic candidate before live validation.
-7. Run the preregistered OAuth probe and exactly one complete 36-attempt cohort; retain and commit every outcome.
-8. Only after the unchanged hard/exclusion gates pass, obtain genuine human review of all 36 titles. Do not use an LLM judge.
-9. Run two-axis review against `origin/main`, fix findings, rerun deterministic validation, and commit all work.
+The authoritative approved implementation criteria and plan were recorded in [Correct title instruction after failed release quality gate](https://github.com/nistaux/pi-prompt-title/issues/37). That issue records the owner-approved amendment, manifest and anti-replacement criteria, pre-agreed test seams, implementation sequence, and completed machine-gate evidence. [Add and record credential-gated release validation](https://github.com/nistaux/pi-prompt-title/issues/26) records the subsequent evidence hardening, retained final cohort, and completed human-review result. Those GitHub issues are the planning and completion records; this document retains only the research evidence and decision rationale.
 
 ## Residual risks
 

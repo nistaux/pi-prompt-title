@@ -33,6 +33,16 @@ const manifestUrl = new URL(
 const manifestPath = fileURLToPath(manifestUrl);
 const manifestRepositoryPath =
   "docs/validation/release-validation-manifest.json";
+const approvedPostEvidenceCorrectionPreregistration =
+  "94c166cb160b529c526083c76dbb25ee47873956";
+const approvedPostEvidenceCorrectionPaths = new Set([
+  reportRepositoryPath,
+  "validation/release-validation.ts",
+  "validation/report-store.ts",
+  "test/release-validation.test.ts",
+  "README.md",
+  "docs/research/release-quality-gate-decision.md",
+]);
 const fixtureUrl = new URL(
   "../docs/research/title-quality-fixtures.json",
   import.meta.url,
@@ -309,16 +319,46 @@ export function assertHumanReviewCandidateHistory(input: {
   currentCommit: string;
   testedCommitIsAncestor: boolean;
   changedPaths: readonly string[];
+  mergeCommits?: readonly string[];
+  postEvidenceCorrectionCommits?: readonly string[];
+  manifestMatchesCurrentFingerprint?: boolean;
 }): void {
-  if (input.testedCommit === input.currentCommit) return;
   if (!input.testedCommitIsAncestor) {
     throw new Error(
       "Human review HEAD must descend from the tested candidate.",
     );
   }
-  if (input.changedPaths.some((path) => path !== reportRepositoryPath)) {
+  if ((input.mergeCommits ?? []).length > 0) {
     throw new Error(
-      "Human review permits only release-report commits after the tested candidate.",
+      "Human review history must be linear and cannot contain merge commits.",
+    );
+  }
+  if (input.testedCommit === input.currentCommit) return;
+
+  const correctionPaths = input.changedPaths.filter(
+    (path) => path !== reportRepositoryPath,
+  );
+  if (correctionPaths.length === 0) return;
+  if (!input.manifestMatchesCurrentFingerprint) {
+    throw new Error(
+      "Post-evidence correction requires the manifest to match the current production fingerprint.",
+    );
+  }
+  if (
+    input.testedCommit !== approvedPostEvidenceCorrectionPreregistration ||
+    (input.postEvidenceCorrectionCommits ?? []).length !== 1
+  ) {
+    throw new Error(
+      "Human review permits exactly one approved post-evidence correction commit for this preregistration.",
+    );
+  }
+  if (
+    correctionPaths.some(
+      (path) => !approvedPostEvidenceCorrectionPaths.has(path),
+    )
+  ) {
+    throw new Error(
+      "Human review permits only approved post-evidence correction paths.",
     );
   }
 }
@@ -405,6 +445,61 @@ async function expectedRunManifest(
     instruction: TITLE_GENERATION_INSTRUCTION,
     fixtureSetContents: await readFile(fixtureUrl, "utf8"),
   });
+}
+
+async function assertCurrentManifestMatchesProductionFingerprint(
+  preregistrationCommit: string,
+): Promise<void> {
+  let committedContents: string;
+  try {
+    ({ stdout: committedContents } = await execFileAsync("git", [
+      "show",
+      `HEAD:${manifestRepositoryPath}`,
+    ]));
+  } catch {
+    throw new Error(
+      "The committed release-validation run manifest is unavailable.",
+    );
+  }
+  const workingContents = await readFile(manifestUrl, "utf8");
+  if (workingContents.trimEnd() !== committedContents.trimEnd()) {
+    throw new Error(
+      "The release-validation run manifest must match committed HEAD.",
+    );
+  }
+  const manifest = parseRunManifest(committedContents);
+  const expected = await expectedRunManifest(
+    manifest.candidateCommit,
+    manifest.createdAtUtc,
+  );
+  if (JSON.stringify(manifest) !== JSON.stringify(expected)) {
+    throw new Error(
+      "The release-validation run manifest does not match the current production fingerprint.",
+    );
+  }
+  try {
+    await execFileAsync("git", [
+      "merge-base",
+      "--is-ancestor",
+      manifest.candidateCommit,
+      "HEAD",
+    ]);
+  } catch {
+    throw new Error("The run-manifest candidate must be an ancestor of HEAD.");
+  }
+  const { stdout: manifestCommitOutput } = await execFileAsync("git", [
+    "log",
+    "-1",
+    "--format=%H",
+    "HEAD",
+    "--",
+    manifestRepositoryPath,
+  ]);
+  if (manifestCommitOutput.trim() !== preregistrationCommit) {
+    throw new Error(
+      "Human review preregistration must match the committed run manifest.",
+    );
+  }
 }
 
 async function currentProductionCandidateCommit(): Promise<string> {
@@ -628,20 +723,34 @@ export function assertHumanReviewMachineEvidenceUnchanged(
       "Machine evidence must be committed before human judgments are entered.",
     );
   }
-  const withoutHumanReview = (report: ReleaseValidationReport) => ({
+  const withoutHumanReviewOrDerivedFields = (
+    report: ReleaseValidationReport,
+  ) => ({
     ...report,
+    generatedAtUtc: null,
+    oauth:
+      report.oauth.assertions === null
+        ? report.oauth
+        : {
+            ...report.oauth,
+            classification: null,
+            diagnostic: null,
+          },
     quality: {
       ...report.quality,
+      classification: null,
+      diagnostic: null,
       attempts: report.quality.attempts.map((attempt) => ({
         ...attempt,
         humanSemanticPassed: null,
         humanRationale: null,
       })),
     },
+    conclusion: null,
   });
   if (
-    JSON.stringify(withoutHumanReview(committed)) !==
-    JSON.stringify(withoutHumanReview(edited))
+    JSON.stringify(withoutHumanReviewOrDerivedFields(committed)) !==
+    JSON.stringify(withoutHumanReviewOrDerivedFields(edited))
   ) {
     throw new Error(
       "Human review machine evidence must match the committed live run.",
@@ -694,12 +803,16 @@ export function finalizeHumanReviewReport(
     attempts,
   };
   const oauth = recomputeOAuthValidation(report.oauth);
-  return {
+  const recomputed = {
     ...report,
-    generatedAtUtc: new Date().toISOString(),
     oauth,
     quality,
     conclusion: releaseGateConclusion({ oauth, quality: attempts }),
+  };
+  if (JSON.stringify(recomputed) === JSON.stringify(report)) return report;
+  return {
+    ...recomputed,
+    generatedAtUtc: new Date().toISOString(),
   };
 }
 
@@ -873,7 +986,6 @@ async function assertRecordedCandidateHistory(
   testedCommit: string,
   currentCommit: string,
 ): Promise<void> {
-  if (testedCommit === currentCommit) return;
   if (!/^[0-9a-f]{40}$/u.test(testedCommit)) {
     throw new Error("Recorded validation has an invalid tested commit.");
   }
@@ -891,23 +1003,80 @@ async function assertRecordedCandidateHistory(
   }
 
   let changedPaths: string[] = [];
+  let mergeCommits: string[] = [];
+  let postEvidenceCorrectionCommits: string[] = [];
   if (testedCommitIsAncestor) {
-    const { stdout } = await execFileAsync("git", [
-      "log",
-      "-m",
-      "--format=",
-      "--name-only",
-      `${testedCommit}..${currentCommit}`,
-      "--",
+    const [
+      { stdout: paths },
+      { stdout: merges },
+      { stdout: correctionCommits },
+    ] = await Promise.all([
+      execFileAsync("git", [
+        "-c",
+        "diff.renames=false",
+        "log",
+        "--no-renames",
+        "-m",
+        "--format=",
+        "--name-only",
+        "-z",
+        `${testedCommit}..${currentCommit}`,
+        "--",
+      ]),
+      execFileAsync("git", [
+        "rev-list",
+        "--min-parents=2",
+        `${testedCommit}..${currentCommit}`,
+      ]),
+      execFileAsync("git", [
+        "log",
+        "--format=%H",
+        `${testedCommit}..${currentCommit}`,
+        "--",
+        ".",
+        `:(exclude)${reportRepositoryPath}`,
+      ]),
     ]);
-    changedPaths = stdout.split(/\r?\n/u).filter((path) => path !== "");
+    changedPaths = paths.split("\0").filter((path) => path !== "");
+    mergeCommits = merges.split(/\r?\n/u).filter((commit) => commit !== "");
+    postEvidenceCorrectionCommits = correctionCommits
+      .split(/\r?\n/u)
+      .filter((commit) => /^[0-9a-f]{40}$/u.test(commit));
   }
   assertHumanReviewCandidateHistory({
     testedCommit,
     currentCommit,
     testedCommitIsAncestor,
     changedPaths,
+    mergeCommits,
+    postEvidenceCorrectionCommits,
+    manifestMatchesCurrentFingerprint: true,
   });
+}
+
+export function selectUniqueCommittedMachineReport(
+  reports: readonly ReleaseValidationReport[],
+): ReleaseValidationReport {
+  const candidates = reports.filter(
+    (report) =>
+      report.oauthProbesStarted === 1 &&
+      report.oauthProbeCompleted === true &&
+      report.qualityCohortsStarted === 1 &&
+      report.qualityCohortCompleted === true &&
+      report.quality.attempts.length === 36 &&
+      report.quality.attempts.every(
+        (attempt) =>
+          attempt.attemptCompleted &&
+          attempt.humanSemanticPassed === null &&
+          attempt.humanRationale === null,
+      ),
+  );
+  if (candidates.length !== 1) {
+    throw new Error(
+      "Human review requires exactly one committed pre-human machine baseline.",
+    );
+  }
+  return candidates[0] as ReleaseValidationReport;
 }
 
 async function readCommittedMachineReport(
@@ -925,6 +1094,7 @@ async function readCommittedMachineReport(
   const evidenceCommits = history
     .split(/\r?\n/u)
     .filter((line) => /^[0-9a-f]{40}$/u.test(line));
+  const reports: ReleaseValidationReport[] = [];
   for (const evidenceCommit of evidenceCommits) {
     const { stdout: markdown } = await execFileAsync("git", [
       "show",
@@ -933,17 +1103,12 @@ async function readCommittedMachineReport(
     const report = parseReport(markdown);
     if (
       report !== undefined &&
-      (report.preregistrationCommit ?? report.testedCommit) === testedCommit &&
-      report.quality.attempts.length === 36 &&
-      report.oauthProbeCompleted !== false &&
-      report.qualityCohortCompleted !== false
+      (report.preregistrationCommit ?? report.testedCommit) === testedCommit
     ) {
-      return report;
+      reports.push(report);
     }
   }
-  throw new Error(
-    "Commit complete OAuth and 36-attempt machine evidence before editing human judgments.",
-  );
+  return selectUniqueCommittedMachineReport(reports);
 }
 
 export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationReport> {
@@ -957,6 +1122,9 @@ export async function finalizeRecordedHumanReview(): Promise<ReleaseValidationRe
     }
     const preregistrationCommit =
       report.preregistrationCommit ?? report.testedCommit;
+    await assertCurrentManifestMatchesProductionFingerprint(
+      preregistrationCommit,
+    );
     await assertRecordedCandidateHistory(preregistrationCommit, currentCommit);
     const committed = await readCommittedMachineReport(
       preregistrationCommit,
