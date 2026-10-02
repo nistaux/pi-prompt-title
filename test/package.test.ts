@@ -20,14 +20,14 @@ describe("Pi package manifest", () => {
     expect(packageJson.pi?.extensions).toEqual(["./src/index.ts"]);
   });
 
-  it("uses Pi core packages as unbundled peers while testing exactly 0.80.10", () => {
+  it("uses Pi core packages as unbundled peers while testing exactly 1.0.0", () => {
     expect(packageJson.peerDependencies).toMatchObject({
       "@earendil-works/pi-ai": "*",
       "@earendil-works/pi-coding-agent": "*",
     });
     expect(packageJson.devDependencies).toMatchObject({
-      "@earendil-works/pi-ai": "0.80.10",
-      "@earendil-works/pi-coding-agent": "0.80.10",
+      "@earendil-works/pi-ai": "1.0.0",
+      "@earendil-works/pi-coding-agent": "1.0.0",
     });
     expect(packageJson.engines?.node).toBe(">=22.19.0");
   });

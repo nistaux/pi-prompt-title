@@ -66,8 +66,8 @@ function createLifecycleHarness(options: {
   mode?: ExtensionContext["mode"];
 } = {}) {
   const handlers = new Map<string, LifecycleHandler[]>();
-  const model = getModel("openai-codex", "gpt-5.4-mini");
-  if (!model) throw new Error("Pi 0.80.10 default title model is missing");
+  const model = getModel("openai-codex", "gpt-6-luna");
+  if (!model) throw new Error("Pi 1.0.0 default title model is missing");
   let sessionTitle = options.sessionTitle;
   let sessionId = "session-a";
   const branch = options.branch ?? [];
@@ -285,11 +285,11 @@ describe("actionable startup warnings", () => {
 
     expect(harness.spies.find).toHaveBeenCalledWith(
       "openai-codex",
-      "gpt-5.4-mini",
+      "gpt-6-luna",
     );
     expect(harness.spies.getApiKeyAndHeaders).not.toHaveBeenCalled();
     expect(harness.spies.publish).toHaveBeenLastCalledWith(harness.ctx, [
-      'Pi Prompt Title: "openai-codex"/"gpt-5.4-mini" is unavailable; check the model setting.',
+      'Pi Prompt Title: "openai-codex"/"gpt-6-luna" is unavailable; check the model setting.',
     ]);
     expect(consoleWarning).not.toHaveBeenCalled();
     expect(Object.values({
@@ -422,7 +422,7 @@ describe("actionable startup warnings", () => {
       `Pi Prompt Title: ${JSON.stringify(configurationPath)}: Configuration file contains malformed JSON.`;
     expect(harness.spies.publish).toHaveBeenLastCalledWith(harness.ctx, [
       configurationWarning,
-      'Pi Prompt Title: "openai-codex"/"gpt-5.4-mini" is unavailable; check the model setting.',
+      'Pi Prompt Title: "openai-codex"/"gpt-6-luna" is unavailable; check the model setting.',
     ]);
 
     await harness.emit("before_agent_start", {

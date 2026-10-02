@@ -32,8 +32,8 @@ import {
 } from "../validation/report-store.js";
 
 function defaultModel(): Model<Api> {
-  const model = getModel("openai-codex", "gpt-5.4-mini");
-  if (!model) throw new Error("Pi 0.80.10 default model is unavailable");
+  const model = getModel("openai-codex", "gpt-6-luna");
+  if (!model) throw new Error("Pi 1.0.0 default model is unavailable");
   return model;
 }
 
@@ -211,7 +211,7 @@ describe("release-validation helpers", () => {
       evaluateQualityAttempt(
         { id: "long", prompt: "Investigate", forbiddenDetails: [] },
         1,
-        "Investigate gpt-5.4-mini reasoning rejection",
+        "Investigate gpt-6-luna reasoning rejection",
       ),
     ).toMatchObject({
       hardValidationPassed: false,
@@ -647,7 +647,7 @@ describe("release-validation helpers", () => {
       createdAtUtc: "2026-07-20T00:00:00.000Z",
       target: {
         provider: "openai-codex",
-        model: "gpt-5.4-mini",
+        model: "gpt-6-luna",
         api: "openai-codex-responses",
         baseUrl: "https://chatgpt.com/backend-api",
         backend: "ChatGPT OAuth",

@@ -25,8 +25,8 @@ function deferred<T>() {
 }
 
 function createHarness() {
-  const catalogModel = getModel("openai-codex", "gpt-5.4-mini");
-  if (!catalogModel) throw new Error("Pi 0.80.10 default title model is missing");
+  const catalogModel = getModel("openai-codex", "gpt-6-luna");
+  if (!catalogModel) throw new Error("Pi 1.0.0 default title model is missing");
   const model = {
     ...catalogModel,
     provider: configuration.model.provider,

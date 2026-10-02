@@ -62,7 +62,7 @@ async function runIsolatedSmoke() {
   const piPackage = JSON.parse(
     await readFile(join(piPackageRoot, "package.json"), "utf8"),
   );
-  assert.equal(piPackage.version, "0.80.10");
+  assert.equal(piPackage.version, "1.0.0");
 
   try {
     await Promise.all([
@@ -182,7 +182,7 @@ async function runIsolatedSmoke() {
     assert.equal(extension.entryRenderers?.size ?? 0, 0);
 
     console.log(
-      "Pi 0.80.10 isolated direct-load and local-path install/discovery smoke passed",
+      "Pi 1.0.0 isolated direct-load and local-path install/discovery smoke passed",
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

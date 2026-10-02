@@ -235,7 +235,7 @@ export async function loadSessionConfiguration(
 ): Promise<SessionConfigurationState> {
   let effective: TitleGenerationConfiguration = {
     enabled: true,
-    model: { provider: "openai-codex", id: "gpt-5.4-mini" },
+    model: { provider: "openai-codex", id: "gpt-6-luna" },
     timeoutMs: 10_000,
   };
   const diagnostics: ConfigurationDiagnostic[] = [];

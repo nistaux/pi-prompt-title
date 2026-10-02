@@ -121,8 +121,8 @@ async function createSdkFixture(options: {
   sessionManager?: SessionManager;
   sessionStartEvent?: SessionStartEvent;
 } = {}) {
-  const model = getModel("openai-codex", "gpt-5.4-mini");
-  if (!model) throw new Error("Pi 0.80.10 default title model is missing");
+  const model = getModel("openai-codex", "gpt-6-luna");
+  if (!model) throw new Error("Pi 1.0.0 default title model is missing");
 
   const completion = deferred<AssistantMessage>();
   const complete = vi.fn<TitleModelCompletion>(() => completion.promise);
@@ -405,7 +405,6 @@ async function emitSubstantivePrompt(
   await fixture.session.extensionRunner.emitBeforeAgentStart(
     prompt,
     undefined,
-    "",
     {
       cwd: process.cwd(),
       selectedTools: [],
@@ -418,7 +417,7 @@ async function emitSubstantivePrompt(
   );
 }
 
-describe("Pi 0.80.10 lifecycle-runner integration", () => {
+describe("Pi 1.0.0 lifecycle-runner integration", () => {
   it("detaches one title attempt and persists a valid result through the real session manager", async () => {
     const fixture = await createSdkFixture();
 

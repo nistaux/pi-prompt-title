@@ -10,7 +10,7 @@ import {
 
 export const RELEASE_TARGET = Object.freeze({
   provider: "openai-codex",
-  model: "gpt-5.4-mini",
+  model: "gpt-6-luna",
   api: "openai-codex-responses",
   baseUrl: "https://chatgpt.com/backend-api",
   backend: "ChatGPT OAuth",
@@ -659,7 +659,7 @@ This tracked report contains only fixed synthetic-fixture titles and sanitized c
 - \`npm run validate:quality\` runs the one preregistered, complete set of 36 live quality attempts.
 - \`npm run validate:review\` performs only offline recomputation after a human edits all 36 embedded JSON judgments and rationales; it makes no model or network call and is not an LLM judge.
 - After committing failed or stale evidence for history, \`npm run validate:reset\` prepares this report and its run manifest for both fresh gates against a new production fingerprint. Commit both files before either live command. A started probe or cohort cannot be replaced by resetting the same fingerprint.
-- Live prerequisites: Pi 0.80.10, stored ChatGPT OAuth authentication for exact \`openai-codex/gpt-5.4-mini\`, network access, and available provider quota/allowance.
+- Live prerequisites: Pi 1.0.0, stored ChatGPT OAuth authentication for exact \`openai-codex/gpt-6-luna\`, network access, and available provider quota/allowance.
 - Taxonomy: \`pass\`, \`fail\`, \`skip\`, and \`environmental/inconclusive\`. Missing authentication is \`skip\`; transient network/quota/provider failures may be \`environmental/inconclusive\`; neither satisfies the release gate.
 
 ## Run identity

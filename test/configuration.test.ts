@@ -98,7 +98,7 @@ describe("session configuration snapshots", () => {
     expect(state).toEqual({
       configuration: {
         enabled: true,
-        model: { provider: "openai-codex", id: "gpt-5.4-mini" },
+        model: { provider: "openai-codex", id: "gpt-6-luna" },
         timeoutMs: 10_000,
       },
       diagnostics: [],
@@ -274,7 +274,7 @@ describe("session configuration snapshots", () => {
     expect(harness.snapshots[1]).not.toBe(first);
     expect(harness.snapshots[1]?.configuration).toEqual({
       enabled: true,
-      model: { provider: "openai-codex", id: "gpt-5.4-mini" },
+      model: { provider: "openai-codex", id: "gpt-6-luna" },
       timeoutMs: 1_000,
     });
     expect(first?.configuration.enabled).toBe(false);

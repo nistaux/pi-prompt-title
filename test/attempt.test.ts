@@ -64,8 +64,8 @@ const configured: TitleGenerationConfiguration = {
 };
 
 function createHarness() {
-  const catalogModel = getModel("openai-codex", "gpt-5.4-mini");
-  if (!catalogModel) throw new Error("Pi 0.80.10 default title model is missing");
+  const catalogModel = getModel("openai-codex", "gpt-6-luna");
+  if (!catalogModel) throw new Error("Pi 1.0.0 default title model is missing");
   const model: Model<Api> = {
     ...catalogModel,
     provider: configured.model.provider,
@@ -365,7 +365,7 @@ describe("attemptTitleGeneration", () => {
   });
 });
 
-describe("Pi 0.80.10 production compatibility adapter", () => {
+describe("Pi 1.0.0 production compatibility adapter", () => {
   it("serializes explicit no-reasoning generation with no tools before network access", async () => {
     let productionTitleModel: TitleModelCapability | undefined;
     const extension = createPiPromptTitleExtension({
@@ -387,8 +387,8 @@ describe("Pi 0.80.10 production compatibility adapter", () => {
       throw new Error("Production title-model adapter was not exposed");
     }
 
-    const model = getModel("openai-codex", "gpt-5.4-mini");
-    if (!model) throw new Error("Pi 0.80.10 default title model is missing");
+    const model = getModel("openai-codex", "gpt-6-luna");
+    if (!model) throw new Error("Pi 1.0.0 default title model is missing");
     const tokenPayload = Buffer.from(
       JSON.stringify({
         "https://api.openai.com/auth": {

@@ -6,11 +6,11 @@ The opportunity is one-shot. If model lookup, authentication, generation, valida
 
 ## Compatibility
 
-The package's installation, loading, and lifecycle integration have been verified against **Pi 0.80.10**. Compatibility with earlier or later Pi versions has not been tested or claimed. The package requires Node.js 22.19.0 or later.
+The package's installation, loading, and lifecycle integration have been verified against **Pi 1.0.0**. Compatibility with earlier or later Pi versions has not been tested or claimed. The package requires Node.js 22.19.0 or later.
 
 ## Installation
 
-Install the package from Git with the canonical command verified against Pi 0.80.10:
+Install the package from Git with the canonical command verified against Pi 1.0.0:
 
 ```sh
 pi install git:github.com/nistaux/pi-prompt-title
@@ -47,7 +47,7 @@ The built-in configuration is:
   "enabled": true,
   "model": {
     "provider": "openai-codex",
-    "id": "gpt-5.4-mini"
+    "id": "gpt-6-luna"
   },
   "timeoutMs": 10000
 }
@@ -64,7 +64,7 @@ A configuration file may contain only `enabled`, `model`, and `timeoutMs`:
 
 Top-level fields merge independently across valid files. Changes take effect after `/reload` or a session transition, when a new snapshot is loaded; they do not alter the active session's snapshot. Effective `enabled: false` makes the extension inert: it performs no title-model lookup, credential check, warning, prompt capture, timer, or generation work.
 
-The configured exact provider/model must already exist in Pi's model registry and be usable with credentials available through that provider. The default `openai-codex/gpt-5.4-mini` uses Pi's ChatGPT/Codex subscription authentication surface and the `openai-codex-responses` API path. The extension never substitutes the active model or falls back to another model, provider, authentication mechanism, or billing boundary.
+The configured exact provider/model must already exist in Pi's model registry and be usable with credentials available through that provider. The default `openai-codex/gpt-6-luna` uses Pi's ChatGPT/Codex subscription authentication surface and the `openai-codex-responses` API path. The extension never substitutes the active model or falls back to another model, provider, authentication mechanism, or billing boundary.
 
 At enabled startup, the extension performs exact-model lookup and launches a credential preflight only to determine warning state. It does not make a model request or consume the session's title opportunity. Credential resolution is independently bounded by `timeoutMs`, and startup does not wait for this preflight to finish. When a qualifying prompt later consumes the opportunity, the extension resolves the model and credentials again because availability may have changed. That separate one-shot attempt has its own `timeoutMs` budget covering credential resolution and the model request.
 
@@ -118,7 +118,7 @@ After the title opportunity begins, timeout, provider/API error, explicit-no-rea
 
 ## Scope
 
-Interactive model switching and configuration-writing UI are not included; they are tracked by [Add interactive title-model switching in a later release](https://github.com/nistaux/pi-prompt-title/issues/1). This repository does not claim npm publication, release automation, CI support, or compatibility beyond the Pi 0.80.10 surfaces described above.
+Interactive model switching and configuration-writing UI are not included; they are tracked by [Add interactive title-model switching in a later release](https://github.com/nistaux/pi-prompt-title/issues/1). This repository does not claim npm publication, release automation, CI support, or compatibility beyond the Pi 1.0.0 surfaces described above.
 
 ## Development and deterministic validation
 
@@ -133,18 +133,18 @@ After dependencies are installed, all commands below are deterministic, credenti
 ```sh
 npm test                    # complete offline unit and lifecycle-runner integration suite
 npm run test:unit           # focused configuration, lifecycle, and package unit suite
-npm run test:integration    # focused Pi 0.80.10 lifecycle-runner integration
+npm run test:integration    # focused Pi 1.0.0 lifecycle-runner integration
 npm run typecheck           # strict TypeScript checking without emitting files
 npm run verify:package      # verify exact package files, metadata, and bundling boundary
 npm run smoke               # isolated direct load, local install, and manifest discovery
 npm run check               # typecheck, complete tests, package verification, and smoke
 ```
 
-The smoke command creates a candidate from tracked Git content, uses isolated Pi agent directories with startup networking disabled, directly loads `src/index.ts`, runs Pi's local-path installation, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its lifecycle handlers and absence of tools or commands, and removes temporary files. It does not modify the user's Pi settings. The lifecycle-runner integration uses Pi 0.80.10's real extension loading, binding, and dispatch with an in-memory session manager and no provider call.
+The smoke command creates a candidate from tracked Git content, uses isolated Pi agent directories with startup networking disabled, directly loads `src/index.ts`, runs Pi's local-path installation, loads the manifest-addressed extension through `DefaultResourceLoader`, verifies its lifecycle handlers and absence of tools or commands, and removes temporary files. It does not modify the user's Pi settings. The lifecycle-runner integration uses Pi 1.0.0's real extension loading, binding, and dispatch with an in-memory session manager and no provider call.
 
 The canonical Git installation is a separate **networked post-merge gate**, not part of the deterministic offline suite and not replaceable by the local-path smoke. [Prove clean distribution and SDK compatibility](https://github.com/nistaux/pi-prompt-title/issues/25) records the historical gate evidence for verified commit `bef41c93c95e47d0cf2ba34cc0643a4ab2a68b6f`: the canonical command installed and discovered the extension successfully with Pi 0.80.10 in an isolated credential-free agent directory.
 
-Contributors preparing a release can run the separate credential-gated `npm run validate:oauth` and `npm run validate:quality` checks. Both live commands require Pi 0.80.10, stored ChatGPT OAuth authentication for exact `openai-codex/gpt-5.4-mini`, network access, and available provider quota or allowance. After committing failed or stale evidence, `npm run validate:reset` prepares both the report and `docs/validation/release-validation-manifest.json` for a new production fingerprint; commit both files before either live command. The manifest binds the candidate, title instruction, fixtures, exact target/backend, and one planned OAuth probe and quality cohort. Starting either live command reserves a fingerprint-specific local Git ref and updates the report before the provider call; each quality attempt is checkpointed atomically. The reservation ref prevents same-fingerprint reruns only within that clone because ordinary fetches and pushes do not share these custom refs. Committed linear report history is the auditable second layer: human-review verification rejects merge commits and requires exactly one complete pre-human machine baseline. Once a probe or cohort starts in a clone, the same production fingerprint cannot be reset and rerun there to replace its evidence, including after an incomplete or interrupted run.
+Contributors preparing a release can run the separate credential-gated `npm run validate:oauth` and `npm run validate:quality` checks. Both live commands require Pi 1.0.0, stored ChatGPT OAuth authentication for exact `openai-codex/gpt-6-luna`, network access, and available provider quota or allowance. After committing failed or stale evidence, `npm run validate:reset` prepares both the report and `docs/validation/release-validation-manifest.json` for a new production fingerprint; commit both files before either live command. The manifest binds the candidate, title instruction, fixtures, exact target/backend, and one planned OAuth probe and quality cohort. Starting either live command reserves a fingerprint-specific local Git ref and updates the report before the provider call; each quality attempt is checkpointed atomically. The reservation ref prevents same-fingerprint reruns only within that clone because ordinary fetches and pushes do not share these custom refs. Committed linear report history is the auditable second layer: human-review verification rejects merge commits and requires exactly one complete pre-human machine baseline. Once a probe or cohort starts in a clone, the same production fingerprint cannot be reset and rerun there to replace its evidence, including after an incomplete or interrupted run.
 
 Run each preregistered live command at most once and retain every outcome. Preferred 15–30-code-point results remain recorded per attempt and in aggregate, but do not independently fail the release gate. The mandatory machine gates remain 36/36 hard-valid titles and 36/36 forbidden-detail and injection exclusion. After a complete machine-safe quality run, commit the machine report before a human edits only its 36 embedded judgments and rationales and runs the offline, no-model, no-network `npm run validate:review` finalizer. The finalizer requires at least 33/36 titles to be judged specific, glanceable, and descriptive, verifies that all machine evidence still matches the unique committed pre-human report, and rejects report-history merges or multiple baselines; it is not an LLM judge. Rerunning the command against an unchanged committed final report verifies it without changing its timestamp or content. These commands remain outside `npm test` and `npm run check`.
 
@@ -152,6 +152,7 @@ The tracked [release-validation report](docs/validation/release-validation.md) d
 
 ## Research
 
+- [Replacement Codex title model](docs/research/replacement-codex-title-model.md) records why Pi 1.0.0 requires replacing the removed `openai-codex/gpt-5.4-mini` default with `openai-codex/gpt-6-luna`.
 - [Pi extension seams](https://github.com/nistaux/pi-prompt-title/blob/main/docs/research/pi-extension-seams.md) records the verified Pi lifecycle, model, configuration, diagnostics, installation, and testing boundaries.
 - [Title-quality prototype findings](https://github.com/nistaux/pi-prompt-title/blob/main/docs/research/title-quality-prototype.md) preserves the durable conclusions from the throwaway prototype.
 - [Representative title-quality fixtures](https://github.com/nistaux/pi-prompt-title/blob/main/docs/research/title-quality-fixtures.json) are retained for later release validation.
